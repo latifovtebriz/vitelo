@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cover Letter</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            color: #2d2d2d;
+            line-height: 1.8;
+            font-size: 11pt;
+            padding: 60px 50px;
+        }
+
+        .sender {
+            margin-bottom: 32px;
+        }
+        .sender .name { font-size: 14pt; font-weight: 600; color: #111; }
+        .sender .info { font-size: 9pt; color: #666; margin-top: 4px; }
+
+        .date { font-size: 9.5pt; color: #888; margin-bottom: 24px; }
+
+        .body-text {
+            font-size: 10.5pt;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+        }
+
+        .signature {
+            margin-top: 32px;
+            font-size: 10.5pt;
+        }
+        .signature .name { font-weight: 600; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <div class="sender">
+        <div class="name">{{ personal.full_name }}</div>
+        <div class="info">
+            {{ personal.email }}{% if personal.phone %} · {{ personal.phone }}{% endif %}{% if personal.location %} · {{ personal.location }}{% endif %}
+        </div>
+    </div>
+
+    <div class="body-text">{{ letter_text }}</div>
+
+    <div class="signature">
+        Sincerely,
+        <div class="name">{{ personal.full_name }}</div>
+    </div>
+</body>
+</html>

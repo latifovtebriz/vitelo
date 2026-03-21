@@ -1,0 +1,24 @@
+# ── Fix #2: Playwright Dockerfile with Chromium ──
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System deps for Playwright browsers
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python deps
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Fix #2: Install Playwright Chromium with system dependencies
+RUN playwright install chromium --with-deps
+
+# Copy application code
+COPY backend/ .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
