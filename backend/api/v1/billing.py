@@ -1,120 +1,138 @@
-"""Billing endpoints — Lemon Squeezy webhook + credit management.
+"""Billing endpoints — Lemon Squeezy webhook + credits + history + checkout.
 
-Fix #1: HMAC-SHA256 signature verification on webhook.
+POST /webhook    — HMAC-verified Lemon Squeezy webhook
+GET  /credits    — Current user credits balance
+GET  /history    — Transaction history
+GET  /checkout/{tier} — Return hosted checkout URL
 """
 
-import hashlib
-import hmac
+import logging
+import uuid
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.v1.auth import get_current_user
-from core.config import get_settings
 from core.database import get_db
-from core.errors import WebhookVerificationError
+from core.errors import WebhookVerificationError, NotFoundError
+from core.security import get_current_user
 from models.transaction import Transaction
 from models.user import User
-from schemas.billing import CreditResponse, TransactionHistoryResponse, TransactionItem
+from services.billing_service import (
+    get_tier_from_order,
+    process_payment,
+    verify_webhook_signature,
+)
 
+logger = logging.getLogger("vitelo.billing")
 router = APIRouter()
-settings = get_settings()
 
+# ── Lemon Squeezy Checkout URLs (from your LS dashboard) ──
+# Replace these with your actual product checkout links
+CHECKOUT_URLS = {
+    "basic":    "https://vitelo.lemonsqueezy.com/checkout/buy/basic",
+    "pro":      "https://vitelo.lemonsqueezy.com/checkout/buy/pro",
+    "ultimate": "https://vitelo.lemonsqueezy.com/checkout/buy/ultimate",
+}
 
-def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
-    """Verify Lemon Squeezy HMAC-SHA256 webhook signature."""
-    expected = hmac.new(
-        secret.encode("utf-8"),
-        payload,
-        hashlib.sha256,
-    ).hexdigest()
-    return hmac.compare_digest(expected, signature)
+VALID_TIERS = {"basic", "pro", "ultimate"}
 
 
 @router.post("/webhook")
 async def lemon_squeezy_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_signature: str = Header(alias="X-Signature"),
 ):
-    """
-    Lemon Squeezy webhook receiver.
-    - Verifies HMAC-SHA256 signature
-    - Idempotent: ignores duplicate transaction IDs
-    - Adds credits to user on successful payment
-    """
-    raw_body = await request.body()
+    """Lemon Squeezy order_created webhook.
 
-    # ── Fix #1: HMAC-SHA256 verification ──
-    if not verify_webhook_signature(raw_body, x_signature, settings.LEMONSQUEEZY_WEBHOOK_SECRET):
+    - Verify HMAC-SHA256 signature
+    - Find user by email from order
+    - Process payment idempotently
+    - Return 200 {"received": true}
+    """
+    # Read raw body BEFORE any parsing (needed for signature check)
+    payload_bytes = await request.body()
+    signature = request.headers.get("X-Signature", "")
+
+    if not verify_webhook_signature(payload_bytes, signature):
+        logger.warning("Webhook signature verification failed")
         raise WebhookVerificationError()
 
-    payload = await request.json()
-    event_name = payload.get("meta", {}).get("event_name", "")
+    data = await request.json()
 
-    if event_name != "order_created":
-        return {"status": "ignored", "event": event_name}
-
-    # Extract data
-    data = payload.get("data", {})
-    attributes = data.get("attributes", {})
-    order_id = str(data.get("id", ""))
+    # Extract order details
+    order_id = str(data.get("data", {}).get("id", ""))
+    attributes = data.get("data", {}).get("attributes", {})
     user_email = attributes.get("user_email", "")
-    total = attributes.get("total", 0)  # in cents
-    amount_usd = total / 100
+    status = attributes.get("status", "")
 
-    # Idempotency: skip if already processed
-    existing = await db.execute(
-        select(Transaction).where(Transaction.lemon_squeezy_id == order_id)
-    )
-    if existing.scalar_one_or_none():
-        return {"status": "already_processed", "order_id": order_id}
+    # Only process paid orders
+    if status != "paid":
+        logger.info(f"Ignoring non-paid webhook: status={status}")
+        return {"received": True, "skipped": True}
 
     # Find user by email
     result = await db.execute(select(User).where(User.email == user_email))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=404, detail=f"User {user_email} not found")
+        logger.warning(f"Webhook: user not found for email={user_email}")
+        return {"received": True, "user_not_found": True}
 
-    # Calculate credits (1 credit = $3)
-    credits_to_add = max(1, int(amount_usd / 3))
+    # Detect tier and process
+    tier = get_tier_from_order(data)
+    txn = await process_payment(db, user.id, tier, order_id)
+    await db.commit()
 
-    # Create transaction
-    txn = Transaction(
-        user_id=user.id,
-        amount_usd=amount_usd,
-        credits_purchased=credits_to_add,
-        lemon_squeezy_id=order_id,
-        status="completed",
-    )
-    db.add(txn)
+    if txn:
+        logger.info(f"Payment processed: user={user_email} tier={tier} credits now={user.credits}")
 
-    # Add credits
-    user.credits += credits_to_add
-
-    return {"status": "ok", "credits_added": credits_to_add}
+    return {"received": True}
 
 
-@router.get("/credits", response_model=CreditResponse)
+@router.get("/credits")
 async def get_credits(current_user: User = Depends(get_current_user)):
-    """Get current credit balance."""
-    return CreditResponse(credits=current_user.credits, email=current_user.email)
+    """Return current user's credit balance."""
+    return {"credits": current_user.credits}
 
 
-@router.get("/history", response_model=TransactionHistoryResponse)
+@router.get("/history")
 async def get_history(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get transaction history."""
+    """Return user's full transaction history."""
     result = await db.execute(
         select(Transaction)
         .where(Transaction.user_id == current_user.id)
         .order_by(Transaction.created_at.desc())
     )
-    items = result.scalars().all()
-    return TransactionHistoryResponse(
-        items=[TransactionItem.model_validate(t) for t in items],
-        total=len(items),
-    )
+    transactions = result.scalars().all()
+
+    return [
+        {
+            "id": str(t.id),
+            "tier": t.tier,
+            "amount_usd": str(t.amount_usd),
+            "credits_granted": t.credits_granted,
+            "status": t.status,
+            "created_at": t.created_at.isoformat(),
+        }
+        for t in transactions
+    ]
+
+
+@router.get("/checkout/{tier}")
+async def get_checkout_url(
+    tier: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Return Lemon Squeezy hosted checkout URL for the given tier."""
+    if tier not in VALID_TIERS:
+        raise NotFoundError(f"Tier '{tier}'")
+
+    base_url = CHECKOUT_URLS[tier]
+    # Append user email as prefill so LS can track who paid
+    checkout_url = f"{base_url}?checkout[email]={current_user.email}"
+
+    return {"checkout_url": checkout_url, "tier": tier}

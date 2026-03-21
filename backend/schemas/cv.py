@@ -1,4 +1,4 @@
-"""CV request/response schemas."""
+"""CV request/response Pydantic schemas — full implementation."""
 
 import uuid
 from datetime import datetime
@@ -7,10 +7,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-# ── Requests ──
+# ── Sub-models for request ──
 
 class CVPersonalInfo(BaseModel):
-    full_name: str = Field(max_length=255)
+    name: str = Field(max_length=255)
     email: str
     phone: str | None = None
     location: str | None = None
@@ -34,6 +34,8 @@ class CVEducation(BaseModel):
     gpa: str | None = None
 
 
+# ── Main Request ──
+
 class CVGenerateRequest(BaseModel):
     personal: CVPersonalInfo
     experience: list[CVExperience] = []
@@ -41,25 +43,48 @@ class CVGenerateRequest(BaseModel):
     skills: list[str] = []
     languages: list[str] = []
     certifications: list[str] = []
-    template: str = Field(default="modern", pattern="^(modern|minimal|professional)$")
+    target_job: str | None = None           # Optional: "Senior Backend Engineer at Google"
+    template: str = Field(default="modern", pattern="^(modern|minimal)$")
     language: str = Field(default="en", pattern="^(en|az|tr)$")
+
+
+# ── Unlock Request ──
+
+class CVUnlockRequest(BaseModel):
+    tier: str = Field(pattern="^(basic|pro|ultimate)$")
+    job_description: str | None = None     # Needed for cover letter + interview prep
 
 
 # ── Responses ──
 
-class CVResponse(BaseModel):
+class CVGenerateResponse(BaseModel):
+    cv_id: uuid.UUID
+    ats_score: int | None = None
+    ats_tips: list[str] = []
+    watermarked_pdf_url: str
+    ai_output: dict[str, Any]
+
+
+class InterviewQA(BaseModel):
+    q: str
+    a: str
+
+
+class CVUnlockResponse(BaseModel):
+    cv_id: uuid.UUID
+    tier: str
+    clean_pdf_url: str
+    cover_letter_url: str | None = None
+    interview_prep: list[InterviewQA] | None = None
+
+
+class CVListItem(BaseModel):
     id: uuid.UUID
     status: str
-    ats_score: int | None = None
-    pdf_url: str | None = None
-    ai_output: dict[str, Any] | None = None
-    template: str
-    language: str
+    tier: str | None
+    ats_score: int | None
+    watermarked_pdf_url: str | None
+    clean_pdf_url: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-class CVListResponse(BaseModel):
-    items: list[CVResponse]
-    total: int

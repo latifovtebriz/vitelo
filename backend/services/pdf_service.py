@@ -1,59 +1,89 @@
-"""PDF Service — HTML template rendering + Playwright PDF generation."""
+"""PDF Service — Jinja2 + Playwright async PDF generation.
+
+- Renders CV/Cover Letter HTML templates
+- Supports watermark overlay (via CSS)
+- AZ character support (Noto Sans from Google Fonts)
+- Returns PDF as bytes
+"""
 
 import logging
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("vitelo.pdf")
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-
-jinja_env = Environment(
-    loader=FileSystemLoader(str(TEMPLATES_DIR)),
-    autoescape=select_autoescape(["html"]),
-)
+jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
 
 
-class PDFService:
-    """Renders Jinja2 HTML templates and converts to PDF via Playwright."""
+async def generate_cv_pdf(
+    cv_data: dict,
+    template_name: str = "cv_modern",
+    watermark: bool = True,
+    language: str = "en",
+) -> bytes:
+    """Render CV HTML template and export to PDF via Playwright.
 
-    @staticmethod
-    async def render_html(template_name: str, data: dict) -> str:
-        """Render a Jinja2 template with the given data."""
-        template = jinja_env.get_template(f"{template_name}.html")
-        return template.render(**data)
+    Args:
+        cv_data: AI-generated structured CV dict
+        template_name: "cv_modern" or "cv_minimal"
+        watermark: If True, adds diagonal VITELO watermark
+        language: "en", "az", "tr"
 
-    @staticmethod
-    async def html_to_pdf(html_content: str) -> bytes:
-        """Convert HTML string to PDF bytes using Playwright Chromium."""
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
-            await page.set_content(html_content, wait_until="networkidle")
-            pdf_bytes = await page.pdf(
-                format="A4",
-                margin={"top": "20mm", "bottom": "20mm", "left": "15mm", "right": "15mm"},
-                print_background=True,
-            )
-            await browser.close()
-            return pdf_bytes
+    Returns:
+        PDF as bytes
+    """
+    template = jinja_env.get_template(f"{template_name}.html")
+    html_content = template.render(
+        cv=cv_data,
+        watermark=watermark,
+        language=language,
+    )
 
-    @classmethod
-    async def generate_cv_pdf(cls, template_name: str, cv_data: dict) -> bytes:
-        """Full pipeline: data → HTML → PDF bytes."""
-        logger.info(f"Generating PDF with template: {template_name}")
-        html = await cls.render_html(f"cv_{template_name}", cv_data)
-        pdf = await cls.html_to_pdf(html)
-        logger.info(f"PDF generated: {len(pdf)} bytes")
-        return pdf
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-setuid-sandbox"],
+        )
+        page = await browser.new_page()
+        await page.set_content(html_content, wait_until="networkidle")
+        pdf_bytes = await page.pdf(
+            format="A4",
+            print_background=True,
+            margin={"top": "15mm", "bottom": "15mm", "left": "12mm", "right": "12mm"},
+        )
+        await browser.close()
 
-    @classmethod
-    async def generate_cover_letter_pdf(cls, letter_text: str, personal: dict) -> bytes:
-        """Generate a cover letter PDF."""
-        html = await cls.render_html("cover_letter", {
-            "letter_text": letter_text,
-            "personal": personal,
-        })
-        return await cls.html_to_pdf(html)
+    return pdf_bytes
+
+
+async def generate_cover_letter_pdf(
+    cover_letter_text: str,
+    personal: dict,
+    watermark: bool = False,
+) -> bytes:
+    """Render cover letter as PDF."""
+    template = jinja_env.get_template("cover_letter.html")
+    html_content = template.render(
+        text=cover_letter_text,
+        personal=personal,
+        watermark=watermark,
+    )
+
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-setuid-sandbox"],
+        )
+        page = await browser.new_page()
+        await page.set_content(html_content, wait_until="networkidle")
+        pdf_bytes = await page.pdf(
+            format="A4",
+            print_background=True,
+            margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"},
+        )
+        await browser.close()
+
+    return pdf_bytes

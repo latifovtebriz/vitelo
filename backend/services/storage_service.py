@@ -1,72 +1,70 @@
-"""Storage Service — Cloudflare R2 (S3-compatible) file upload."""
+"""Storage Service — Cloudflare R2 (boto3 S3-compatible).
+
+Falls back to /tmp if R2 is not configured.
+"""
 
 import logging
+import os
 import uuid
-from io import BytesIO
+from pathlib import Path
 
 import boto3
-from botocore.config import Config as BotoConfig
+from botocore.exceptions import ClientError
 
 from core.config import get_settings
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("vitelo.storage")
 settings = get_settings()
 
 
-class StorageService:
-    """Upload/download files to Cloudflare R2."""
+def _is_r2_configured() -> bool:
+    return (
+        settings.R2_ACCOUNT_ID != "placeholder"
+        and settings.R2_ACCESS_KEY != "placeholder"
+        and settings.R2_SECRET_KEY != "placeholder"
+    )
 
-    _client = None
 
-    @classmethod
-    def _get_client(cls):
-        if cls._client is None:
-            cls._client = boto3.client(
-                "s3",
-                endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
-                aws_access_key_id=settings.R2_ACCESS_KEY,
-                aws_secret_access_key=settings.R2_SECRET_KEY,
-                config=BotoConfig(
-                    signature_version="s3v4",
-                    retries={"max_attempts": 3, "mode": "adaptive"},
-                ),
-                region_name="auto",
-            )
-        return cls._client
+def _get_r2_client():
+    return boto3.client(
+        "s3",
+        endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+        aws_access_key_id=settings.R2_ACCESS_KEY,
+        aws_secret_access_key=settings.R2_SECRET_KEY,
+        region_name="auto",
+    )
 
-    @classmethod
-    async def upload_pdf(cls, pdf_bytes: bytes, filename: str | None = None) -> str:
-        """
-        Upload PDF bytes to R2 and return the public URL.
-        Retries 3 times on failure (via boto3 config).
-        """
-        if not filename:
-            filename = f"cv_{uuid.uuid4().hex}.pdf"
 
-        key = f"pdfs/{filename}"
-        client = cls._get_client()
+async def upload_pdf(file_bytes: bytes, filename: str) -> str:
+    """Upload PDF bytes to R2 or /tmp as fallback.
 
-        try:
-            client.upload_fileobj(
-                BytesIO(pdf_bytes),
-                settings.R2_BUCKET_NAME,
-                key,
-                ExtraArgs={"ContentType": "application/pdf"},
-            )
-            url = f"{settings.R2_PUBLIC_URL}/{key}"
-            logger.info(f"Uploaded PDF to R2: {url}")
-            return url
-        except Exception as e:
-            logger.error(f"R2 upload failed: {e}")
-            raise
+    Returns:
+        Public URL (R2) or local file path (/tmp)
+    """
+    if not _is_r2_configured():
+        # Fallback: save to /tmp
+        tmp_path = Path("/tmp") / filename
+        tmp_path.write_bytes(file_bytes)
+        logger.warning(f"R2 not configured, saved to: {tmp_path}")
+        return f"/tmp/{filename}"  # In prod: serve via endpoint or setup R2
 
-    @classmethod
-    async def delete_file(cls, key: str) -> bool:
-        """Delete a file from R2."""
-        client = cls._get_client()
-        try:
-            client.delete_object(Bucket=settings.R2_BUCKET_NAME, Key=key)
-            return True
-        except Exception as e:
-            logger.error(f"R2 delete failed: {e}")
-            return False
+    try:
+        client = _get_r2_client()
+        client.put_object(
+            Bucket=settings.R2_BUCKET_NAME,
+            Key=filename,
+            Body=file_bytes,
+            ContentType="application/pdf",
+        )
+        public_url = f"{settings.R2_PUBLIC_URL}/{filename}"
+        logger.info(f"Uploaded to R2: {public_url}")
+        return public_url
+    except ClientError as e:
+        logger.error(f"R2 upload failed: {e}")
+        raise
+
+
+def generate_filename(user_id: str, suffix: str = "cv") -> str:
+    """Generate a unique filename for a PDF."""
+    unique = uuid.uuid4().hex[:8]
+    return f"pdfs/{user_id}/{suffix}_{unique}.pdf"
