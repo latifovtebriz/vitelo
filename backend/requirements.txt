@@ -18,3 +18,4 @@ playwright
 slowapi
 httpx
 python-multipart
+google-generativeai
