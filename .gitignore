@@ -18,10 +18,17 @@ dist/
 .next/
 .nuxt/
 
-# Environment
+# Environment — NEVER commit real credentials
 .env
 .env.local
 .env.*.local
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Project Memory — contains API keys, passwords, SSH credentials
+# Keep this local only, never push to GitHub
+docs/PROJECT_MEMORY.md
 
 # IDE
 .vscode/
@@ -50,3 +57,7 @@ htmlcov/
 *.log
 *.pid
 *.seed
+
+# Deployment artifacts
+deploy.sh
+api.vitelo.me
