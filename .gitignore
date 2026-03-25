@@ -26,9 +26,9 @@ backend/.env
 frontend/.env
 frontend/.env.local
 
-# Project Memory — contains API keys, passwords, SSH credentials
-# Keep this local only, never push to GitHub
-docs/PROJECT_MEMORY.md
+# Docs folder — contains API keys, passwords, SSH credentials, internal notes
+# Keep everything here local only, never push to GitHub
+docs/
 
 # IDE
 .vscode/
