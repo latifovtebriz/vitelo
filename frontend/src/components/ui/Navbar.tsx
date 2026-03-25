@@ -1,27 +1,88 @@
-import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { Menu, X, Coins, ChevronDown, Sparkles } from 'lucide-react';
+import { Menu, X, Coins, ChevronDown, Sparkles, FileText, Wand2, ArrowRight, Layout, Star, BookOpen, Play, Headphones } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-const NAV_LINKS = [
-  { label: 'CV Examples', href: '/examples' },
-  { label: 'Templates', href: '/templates' },
-  { label: 'ATS Checker', href: '/checker' },
-  { label: 'Pricing', href: '/pricing' },
-];
+/* ═══════════════════════════════════════════════════
+   MEGA-MENU DATA
+   ═══════════════════════════════════════════════════ */
+
+const MEGA_MENUS: Record<string, { categories?: { icon: any; title: string; desc: string; href: string }[]; lists?: { heading: string; items: { label: string; href: string }[] }[]; promo?: { icon: any; title: string; desc: string; cta: string; href: string } }> = {
+  'Resume Templates': {
+    categories: [
+      { icon: Star, title: 'ATS', desc: 'Optimise your resume and impress employers with ATS-friendly designs.', href: '/templates' },
+      { icon: Layout, title: 'Modern', desc: 'A current, stylish feel for forward-thinking candidates.', href: '/templates' },
+      { icon: FileText, title: 'Professional', desc: 'Job-winning templates to showcase professionalism and expertise.', href: '/templates' },
+      { icon: Wand2, title: 'Simple', desc: 'Clean, timeless templates with a classic balanced structure.', href: '/templates' },
+    ],
+    promo: { icon: Sparkles, title: 'Resume Builder', desc: 'Build powerful resumes in only 5 minutes with our easy to use AI Resume Builder.', cta: 'Get started', href: '/generate' },
+  },
+  'Resume Examples': {
+    categories: [
+      { icon: BookOpen, title: 'Education', desc: 'Educate employers on your skills with a resume fit for the classroom.', href: '/examples' },
+      { icon: Star, title: 'Engineering', desc: 'Build the foundation for success with a resume tailored to engineering.', href: '/examples' },
+      { icon: FileText, title: 'Government', desc: 'Create a government resume that commands attention.', href: '/examples' },
+      { icon: Layout, title: 'Retail', desc: 'Showcase your retail experience with a well-crafted resume.', href: '/examples' },
+    ],
+    lists: [{ heading: 'Most Popular', items: [
+      { label: 'Nurse', href: '/examples/nurse' },
+      { label: 'High School Student', href: '/examples/student' },
+      { label: 'Internship', href: '/examples/internship' },
+      { label: 'Student', href: '/examples/student' },
+      { label: 'Accountant', href: '/examples/accountant' },
+    ]}],
+    promo: { icon: FileText, title: '500+ Free Resume Examples', desc: 'Use the expert guides and our resume builder to create a beautiful resume in minutes.', cta: 'Get started now', href: '/examples' },
+  },
+  'Cover Letter': {
+    categories: [
+      { icon: Layout, title: 'Google docs', desc: 'Google Docs templates for quick, flexible editing.', href: '/cover-letter' },
+      { icon: FileText, title: 'Microsoft word', desc: 'Word templates you can easily edit and customize offline.', href: '/cover-letter' },
+      { icon: Star, title: 'Professional', desc: 'Polished designs to highlight your knowledge and expertise.', href: '/cover-letter' },
+      { icon: Wand2, title: 'Simple', desc: 'Clean, straightforward templates to keep the focus on content.', href: '/cover-letter' },
+    ],
+    lists: [{ heading: 'Cover Letter Examples', items: [
+      { label: 'Nursing', href: '/cover-letter/nursing' },
+      { label: 'Administrative Assistant', href: '/cover-letter/admin-assistant' },
+      { label: 'Internship', href: '/cover-letter/internship' },
+      { label: 'Graduate', href: '/cover-letter/graduate' },
+      { label: 'Teacher', href: '/cover-letter/teacher' },
+    ]}],
+    promo: { icon: Wand2, title: 'Cover Letter Builder', desc: 'Build professional cover letters in a few simple steps using our free Cover Letter builder.', cta: 'Get started now', href: '/cover-letter' },
+  },
+  'Resources': {
+    categories: [
+      { icon: Play, title: 'Video', desc: 'Video guides to help you write better resumes and land more interviews.', href: '/examples' },
+      { icon: Headphones, title: 'Podcasts', desc: 'Career podcasts to coach you through every step of your professional journey.', href: '/examples' },
+    ],
+    lists: [{ heading: 'Blog Categories', items: [
+      { label: 'Job Interview', href: '/examples' },
+      { label: 'Career', href: '/examples' },
+      { label: 'Cover Letter', href: '/cover-letter' },
+      { label: 'Resume Help', href: '/examples' },
+    ]}],
+    promo: { icon: BookOpen, title: 'Latest Articles', desc: 'Explore career tips, interview strategies, and resume optimization guides from our experts.', cta: 'Read blog', href: '/examples' },
+  },
+};
+
+const NAV_ITEMS = ['Resume Templates', 'Resume Examples', 'Cover Letter', 'Resources'];
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    setUserMenuOpen(false);
+  const handleLogout = () => { logout(); navigate('/'); setUserMenuOpen(false); };
+
+  const onEnter = (key: string) => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setActiveMenu(key);
+  };
+  const onLeave = () => {
+    closeTimer.current = setTimeout(() => setActiveMenu(null), 150);
   };
 
   return (
@@ -34,51 +95,103 @@ export default function Navbar() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Vitelo
-            </span>
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Vitelo</span>
           </Link>
 
-          {/* Desktop Centre Links */}
-          <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(link => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  'px-4 py-2 rounded-md text-sm font-medium transition-colors',
-                  location.pathname === link.href
-                    ? 'text-blue-600 bg-blue-50'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          {/* Desktop Nav + Mega Menus */}
+          <nav className="hidden md:flex items-center gap-0.5">
+            {NAV_ITEMS.map(label => (
+              <div key={label} className="relative" onMouseEnter={() => onEnter(label)} onMouseLeave={onLeave}>
+                <button className={cn(
+                  'flex items-center gap-1 px-3.5 py-2 rounded-md text-sm font-medium transition-colors',
+                  activeMenu === label ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100',
+                )}>
+                  {label} <ChevronDown className={cn('w-3 h-3 transition-transform', activeMenu === label && 'rotate-180')} />
+                </button>
+
+                {/* Mega panel */}
+                {activeMenu === label && MEGA_MENUS[label] && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0 pt-2 z-50" onMouseEnter={() => onEnter(label)} onMouseLeave={onLeave}>
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-xl p-0 flex min-w-[640px] max-w-[820px] overflow-hidden">
+                      {/* Left: categories */}
+                      <div className="flex-1 p-6">
+                        <h3 className="text-sm font-bold text-slate-800 mb-4">{label}</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {MEGA_MENUS[label].categories?.map(cat => (
+                            <Link key={cat.title} to={cat.href} onClick={() => setActiveMenu(null)}
+                              className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group/item">
+                              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover/item:bg-blue-100 transition-colors">
+                                <cat.icon className="w-4 h-4 text-blue-500" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-slate-800 group-hover/item:text-blue-600 flex items-center gap-1">
+                                  {cat.title} <ArrowRight className="w-3 h-3 opacity-0 group-hover/item:opacity-100 transition-opacity" />
+                                </p>
+                                <p className="text-xs text-slate-400 mt-0.5 leading-snug line-clamp-2">{cat.desc}</p>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Middle: lists (if any) */}
+                      {MEGA_MENUS[label].lists && (
+                        <div className="w-40 bg-slate-50/50 border-l border-slate-100 p-5">
+                          {MEGA_MENUS[label].lists!.map(list => (
+                            <div key={list.heading}>
+                              <h4 className="text-xs font-bold text-slate-800 mb-3">{list.heading}</h4>
+                              <ul className="space-y-1.5">
+                                {list.items.map(it => (
+                                  <li key={it.label}>
+                                    <Link to={it.href} onClick={() => setActiveMenu(null)} className="text-sm text-slate-500 hover:text-blue-600 transition-colors">{it.label}</Link>
+                                  </li>
+                                ))}
+                              </ul>
+                              <Link to={list.items[0]?.href || '/'} onClick={() => setActiveMenu(null)} className="text-sm font-semibold text-blue-600 hover:text-blue-700 mt-3 flex items-center gap-1">
+                                All Examples <ArrowRight className="w-3 h-3" />
+                              </Link>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Right: promo */}
+                      {MEGA_MENUS[label].promo && (
+                        <div className="w-52 bg-blue-50/50 border-l border-blue-100/50 p-5 flex flex-col">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center mb-3">
+                            {(() => { const Icon = MEGA_MENUS[label].promo!.icon; return <Icon className="w-5 h-5 text-blue-500" />; })()}
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-800 mb-1">{MEGA_MENUS[label].promo!.title}</h4>
+                          <p className="text-xs text-slate-500 leading-snug flex-1 mb-3">{MEGA_MENUS[label].promo!.desc}</p>
+                          <Link to={MEGA_MENUS[label].promo!.href} onClick={() => setActiveMenu(null)} className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                            {MEGA_MENUS[label].promo!.cta} <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
-              >
-                {link.label}
-              </Link>
+              </div>
             ))}
+
+            {/* FAQ link */}
+            <Link to="/examples" className="px-3.5 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">FAQ</Link>
           </nav>
 
           {/* Desktop Right */}
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                {/* Credits Badge */}
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-sm font-semibold text-amber-700">
-                  <Coins className="w-3.5 h-3.5" />
-                  {user?.credits ?? 0} credits
+                  <Coins className="w-3.5 h-3.5" /> {user?.credits ?? 0} credits
                 </div>
-
-                {/* User Menu */}
                 <div className="relative">
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                  >
+                  <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">
-                      {user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                      {user?.full_name?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                   </button>
-
                   {userMenuOpen && (
                     <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50">
                       <div className="px-3 py-2 border-b border-slate-100">
@@ -90,20 +203,15 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-
-                <Link to="/generate" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-sm hover:shadow-md hover:from-blue-700 hover:to-indigo-700 transition-all">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Create CV
+                <Link to="/generate" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all">
+                  <Sparkles className="w-3.5 h-3.5" /> My Account
                 </Link>
               </>
             ) : (
               <>
-                <Link to="/login" className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-                  Log in
-                </Link>
-                <Link to="/register" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-sm hover:shadow-md hover:from-blue-700 hover:to-indigo-700 transition-all">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Create CV — Free
+                <Link to="/login" className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Log in</Link>
+                <Link to="/register" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all">
+                  <Sparkles className="w-3.5 h-3.5" /> My Account
                 </Link>
               </>
             )}
@@ -118,33 +226,27 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white">
+        <div className="md:hidden border-t border-slate-200 bg-white max-h-[80vh] overflow-y-auto">
           <div className="px-4 py-3 space-y-1">
-            {NAV_LINKS.map(link => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50"
-              >
-                {link.label}
-              </Link>
+            {NAV_ITEMS.map(label => (
+              <div key={label}>
+                <Link to={label === 'Resume Templates' ? '/templates' : label === 'Resume Examples' ? '/examples' : label === 'Cover Letter' ? '/cover-letter' : '/examples'}
+                  onClick={() => setMobileOpen(false)} className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  {label}
+                </Link>
+              </div>
             ))}
             <div className="pt-3 border-t border-slate-100 space-y-2">
               {isAuthenticated ? (
                 <>
                   <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm text-slate-700">Dashboard</Link>
                   <button onClick={handleLogout} className="block w-full text-left px-3 py-2 text-sm text-red-600">Log out</button>
-                  <Link to="/generate" onClick={() => setMobileOpen(false)} className="block w-full text-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold">
-                    Create CV
-                  </Link>
+                  <Link to="/generate" onClick={() => setMobileOpen(false)} className="block w-full text-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold">Create CV</Link>
                 </>
               ) : (
                 <>
                   <Link to="/login" onClick={() => setMobileOpen(false)} className="block px-3 py-2 text-sm text-slate-700">Log in</Link>
-                  <Link to="/register" onClick={() => setMobileOpen(false)} className="block w-full text-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold">
-                    Create CV — Free
-                  </Link>
+                  <Link to="/register" onClick={() => setMobileOpen(false)} className="block w-full text-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold">Create CV — Free</Link>
                 </>
               )}
             </div>

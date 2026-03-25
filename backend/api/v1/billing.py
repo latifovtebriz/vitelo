@@ -28,12 +28,11 @@ from services.billing_service import (
 logger = logging.getLogger("vitelo.billing")
 router = APIRouter()
 
-# ── Lemon Squeezy Checkout URLs (from your LS dashboard) ──
-# Replace these with your actual product checkout links
+# ── Lemon Squeezy Checkout URLs (real product links) ──
 CHECKOUT_URLS = {
-    "basic":    "https://vitelo.lemonsqueezy.com/checkout/buy/basic",
-    "pro":      "https://vitelo.lemonsqueezy.com/checkout/buy/pro",
-    "ultimate": "https://vitelo.lemonsqueezy.com/checkout/buy/ultimate",
+    "basic":    "https://vitelo.lemonsqueezy.com/checkout/buy/f70d5ec6-2c23-4789-b634-4891e55594c3",
+    "pro":      "https://vitelo.lemonsqueezy.com/checkout/buy/d6140b0a-eb81-45c6-aa37-40f3c4419aaa",
+    "ultimate": "https://vitelo.lemonsqueezy.com/checkout/buy/78a4fe7d-8347-4af7-b2cd-bc5bc2a47391",
 }
 
 VALID_TIERS = {"basic", "pro", "ultimate"}

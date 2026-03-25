@@ -22,9 +22,9 @@ settings = get_settings()
 
 # Tier → price mapping (for record keeping)
 TIER_PRICES = {
-    "basic": "3.00",
-    "pro": "5.99",
-    "ultimate": "8.99",
+    "basic": "4.99",
+    "pro": "7.99",
+    "ultimate": "12.99",
 }
 
 
