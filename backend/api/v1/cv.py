@@ -226,3 +226,91 @@ async def get_cv(
     if not cv:
         raise NotFoundError("CV")
     return cv
+
+
+# ── Tailor CV to Job Description ─────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+class TailorRequest(_BaseModel):
+    job_url: str | None = None
+    job_description: str | None = None
+
+
+@router.post("/tailor/{cv_id}")
+async def tailor_cv(
+    cv_id: uuid.UUID,
+    body: TailorRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Tailor an existing CV to a specific job description.
+    Rewrites summary and experience bullets. Saves as new CV record.
+    """
+    # 1. Load original CV
+    result = await db.execute(
+        select(CVGeneration).where(
+            CVGeneration.id == cv_id,
+            CVGeneration.user_id == current_user.id,
+        )
+    )
+    original_cv = result.scalar_one_or_none()
+    if not original_cv:
+        raise NotFoundError("CV")
+
+    if not body.job_description:
+        return {"error": "job_description is required"}
+
+    # 2. Build tailor prompt
+    import json
+    tailor_prompt = (
+        "Given this CV data and this job description, rewrite ONLY the "
+        "professional summary and experience bullet points to better match the job. "
+        "Keep all facts true — only rephrase and emphasize relevant skills. "
+        "Return ONLY valid JSON with the SAME full structure as the input CV data, "
+        "but with updated 'summary' and 'experience[].bullets' fields."
+    )
+    user_content = (
+        f"CV DATA:\n{json.dumps(original_cv.ai_output, ensure_ascii=False, indent=2)}\n\n"
+        f"JOB DESCRIPTION:\n{body.job_description}"
+    )
+
+    # 3. Call AI
+    tailored_output = await ai_service._call_ai(tailor_prompt, user_content)
+    tailored_data = ai_service._parse_json(tailored_output)
+
+    # 4. Generate watermarked PDF
+    pdf_bytes = await generate_cv_pdf(
+        cv_data=tailored_data,
+        template_name=original_cv.template or "cv_modern",
+        watermark=True,
+        language=original_cv.language,
+    )
+    filename = generate_filename(str(current_user.id), "tailored_watermarked")
+    watermarked_url = await upload_pdf(pdf_bytes, filename)
+
+    # 5. Save new CV record
+    new_cv = CVGeneration(
+        user_id=current_user.id,
+        status="done",
+        input_data={**original_cv.input_data, "tailored_from": str(cv_id), "job_url": body.job_url},
+        ai_output=tailored_data,
+        ats_score=tailored_data.get("ats_score", original_cv.ats_score),
+        watermarked_pdf_url=watermarked_url,
+        clean_pdf_url=None,
+        tier=None,
+        template=original_cv.template,
+        language=original_cv.language,
+    )
+    db.add(new_cv)
+    await db.commit()
+    await db.refresh(new_cv)
+
+    logger.info(f"CV tailored: original={cv_id} new={new_cv.id}")
+
+    return {
+        "cv_id": str(new_cv.id),
+        "ai_output": tailored_data,
+        "watermarked_pdf_url": watermarked_url,
+    }

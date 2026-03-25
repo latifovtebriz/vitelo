@@ -10,6 +10,9 @@ import Register from './pages/Register';
 import Templates from './pages/Templates';
 import Examples from './pages/Examples';
 import ExampleDetail from './pages/ExampleDetail';
+import CoverLetterExamples from './pages/CoverLetterExamples';
+import CoverLetterDetail from './pages/CoverLetterDetail';
+import Account from './pages/Account';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -27,30 +30,19 @@ export default function App() {
         <Route path="/templates" element={<Templates />} />
         <Route path="/examples" element={<Examples />} />
         <Route path="/examples/:slug" element={<ExampleDetail />} />
+        <Route path="/cover-letter" element={<CoverLetterExamples />} />
+        <Route path="/cover-letter/:slug" element={<CoverLetterDetail />} />
 
-        {/* Stubs — to add later */}
+        {/* Stubs — to build later */}
         <Route path="/pricing" element={<Landing />} />
         <Route path="/checker" element={<Landing />} />
         <Route path="/privacy" element={<Landing />} />
         <Route path="/terms" element={<Landing />} />
 
         {/* Protected */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/generate"
-          element={
-            <ProtectedRoute>
-              <GenerateCV />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/generate" element={<ProtectedRoute><GenerateCV /></ProtectedRoute>} />
+        <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" />} />
