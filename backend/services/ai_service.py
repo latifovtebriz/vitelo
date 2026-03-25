@@ -1,4 +1,4 @@
-"""AI Service — Gemini 1.5 Flash primary + Mistral Small fallback.
+"""AI Service — Gemini 2.0 Flash (primary, retry x3).
 
 Features:
 - tenacity retry (3 attempts, exponential backoff 1-8s)
@@ -12,7 +12,6 @@ import logging
 from typing import Any
 
 import google.generativeai as genai
-import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from core.config import get_settings
@@ -79,9 +78,7 @@ class AIService:
     """AI service with Gemini primary and Mistral fallback."""
 
     def __init__(self):
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
-        self.mistral_api_key = "unauthenticated"  # Mistral free tier
-        self.mistral_url = "https://api.mistral.ai/v1/chat/completions"
+        self.model = genai.GenerativeModel("gemini-2.0-flash")
 
     @retry(
         stop=stop_after_attempt(3),
@@ -100,35 +97,13 @@ class AIService:
         )
         return response.text
 
-    async def _call_mistral(self, system_prompt: str, user_content: str) -> str:
-        """Fallback: Call Mistral Small API."""
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                "https://api.mistral.ai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {settings.GEMINI_API_KEY}",  # placeholder — Mistral key would go here
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "mistral-small-latest",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_content},
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": 4096,
-                },
-            )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
-
     async def _call_ai(self, system_prompt: str, user_content: str) -> str:
-        """Try Gemini first, fallback to Mistral on any error."""
+        """Call Gemini with retry. Raises on final failure."""
         try:
             return await self._call_gemini(system_prompt, user_content)
         except Exception as e:
-            logger.warning(f"Gemini failed ({e}), trying Mistral fallback")
-            return await self._call_mistral(system_prompt, user_content)
+            logger.error(f"AI call failed after retries: {e}")
+            raise RuntimeError(f"AI service temporarily unavailable: {e}")
 
     def _parse_json(self, text: str) -> Any:
         """Strip markdown fences and parse JSON."""

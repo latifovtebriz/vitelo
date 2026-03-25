@@ -1,0 +1,15 @@
+﻿vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers_async.py", line 86, in __await__
+vitelo-api  | 	details = "models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods."
+vitelo-api  | 	debug_error_string = "UNKNOWN:Error received from peer ipv4:142.251.13.95:443 {grpc_status:5, grpc_message:"models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods."}"
+vitelo-api  |     return await self._call_gemini(system_prompt, user_content)
+vitelo-api  |   File "/app/services/ai_service.py", line 94, in _call_gemini
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/google/generativeai/generative_models.py", line 385, in generate_content_async
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/google/ai/generativelanguage_v1beta/services/generative_service/async_client.py", line 440, in generate_content
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary_async.py", line 231, in retry_wrapped_func
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary_async.py", line 163, in retry_target
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_base.py", line 216, in _retry_error_helper
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary_async.py", line 158, in retry_target
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers_async.py", line 89, in __await__
+vitelo-api  | google.api_core.exceptions.NotFound: 404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+vitelo-api  |   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
