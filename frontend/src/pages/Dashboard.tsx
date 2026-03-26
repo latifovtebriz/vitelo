@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { redirectToCheckout } from '../lib/checkout';
 import { useAuthStore } from '../stores/authStore';
 import DashboardLayout from '../components/DashboardLayout';
 import {
@@ -64,8 +65,8 @@ export default function Dashboard() {
     finally { setTailoring(false); }
   };
 
-  const handleCheckout = async (tier: string) => {
-    try { const res = await api.get(`/billing/checkout/${tier}`); window.location.href = res.data.checkout_url; } catch { alert('Checkout failed'); }
+  const handleCheckout = (tier: string) => {
+    redirectToCheckout(tier, user?.email);
   };
 
   return (

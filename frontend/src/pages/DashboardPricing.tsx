@@ -1,4 +1,5 @@
-import { api } from '../lib/api';
+import { redirectToCheckout } from '../lib/checkout';
+import { useAuthStore } from '../stores/authStore';
 import DashboardLayout from '../components/DashboardLayout';
 import { Check, Sparkles, Zap, Crown, CreditCard } from 'lucide-react';
 
@@ -36,14 +37,10 @@ const PLANS = [
 ];
 
 export default function DashboardPricing() {
-  const handleCheckout = async (tier: string) => {
-    try {
-      const res = await api.get(`/billing/checkout/${tier}`);
-      window.location.href = res.data.checkout_url;
-    } catch (err) {
-      console.error('Checkout failed', err);
-      alert('Checkout is temporarily unavailable. Please try again later.');
-    }
+  const { user } = useAuthStore();
+
+  const handleCheckout = (tier: string) => {
+    redirectToCheckout(tier, user?.email);
   };
 
   return (

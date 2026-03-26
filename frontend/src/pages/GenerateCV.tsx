@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { redirectToCheckout } from '../lib/checkout';
 import { useAuthStore } from '../stores/authStore';
 import { FileDown, ChevronRight, Lock as LockIcon } from 'lucide-react';
 
@@ -62,13 +63,8 @@ export default function GenerateCV() {
 
   const handleUnlock = async () => {
     if ((user?.credits || 0) < 1) {
-      // Need to buy credits -> redirect to checkout for selected tier
-      try {
-        const res = await api.get(`/billing/checkout/${selectedTier}`);
-        window.location.href = res.data.checkout_url;
-      } catch (err) {
-        alert("Failed to initiate checkout");
-      }
+      // Need to buy credits -> redirect directly to LemonSqueezy checkout
+      redirectToCheckout(selectedTier, user?.email);
       return;
     }
 
@@ -217,9 +213,9 @@ export default function GenerateCV() {
                 </div>
 
                 <div className="text-slate-100 text-sm mb-6 italic">
-                  {selectedTier === 'basic' && "$3 - High-res PDF download"}
-                  {selectedTier === 'pro' && "$5.99 - CV + Detailed Cover Letter"}
-                  {selectedTier === 'ultimate' && "$8.99 - CV + Cover Letter + 5 Interview Q&As"}
+                  {selectedTier === 'basic' && "$4.99 - High-res PDF download"}
+                  {selectedTier === 'pro' && "$7.99 - CV + Detailed Cover Letter"}
+                  {selectedTier === 'ultimate' && "$12.99 - CV + Cover Letter + 5 Interview Q&As"}
                 </div>
 
                 <button onClick={handleUnlock} disabled={unlocking} className="w-full max-w-sm inline-flex justify-center items-center rounded-md bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-3 text-base font-bold text-white shadow hover:from-green-600 hover:to-emerald-700">
