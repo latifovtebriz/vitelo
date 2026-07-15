@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from core.errors import WebhookVerificationError, NotFoundError
 from core.security import get_current_user
-from models.transaction import Transaction
+from models.billing import Transaction
 from models.user import User
 from services.billing_service import (
     get_tier_from_order,

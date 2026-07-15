@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
-from models.transaction import Transaction
+from models.billing import Transaction
 from models.user import User
 
 logger = logging.getLogger("vitelo.billing")
