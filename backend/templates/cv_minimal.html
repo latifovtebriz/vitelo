@@ -3,92 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ personal.full_name }} — CV</title>
+    <title>{{ (cv.personal.name if cv and cv.personal else personal.full_name) }} — CV</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Noto Sans', sans-serif;
-            color: #2d2d2d;
-            line-height: 1.6;
-            font-size: 10.5pt;
-            padding: 40px;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            line-height: 1.5;
+            font-size: 9.5pt;
+            padding: 30px 40px;
         }
 
-        h1 { font-size: 24pt; font-weight: 600; color: #111; margin-bottom: 4px; }
-        .contact { font-size: 9pt; color: #666; margin-bottom: 28px; }
-        .contact a { color: #666; text-decoration: none; }
+        h1 { font-size: 20pt; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
+        .headline { font-size: 10pt; font-weight: 600; color: #3b82f6; margin-bottom: 6px; }
+        .contact { font-size: 8.5pt; color: #64748b; margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 8px 12px; }
 
-        hr { border: none; border-top: 1px solid #ddd; margin: 20px 0; }
+        hr { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
 
-        .section { margin-bottom: 20px; }
+        .section { margin-bottom: 14px; }
         .section-title {
-            font-size: 10pt; font-weight: 600; color: #888;
-            text-transform: uppercase; letter-spacing: 2px;
-            margin-bottom: 10px;
+            font-size: 9pt; font-weight: 700; color: #475569;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-bottom: 6px;
         }
 
-        .summary { font-size: 10pt; color: #444; }
+        .summary { font-size: 9pt; color: #334155; line-height: 1.5; }
 
-        .item { margin-bottom: 14px; }
-        .item .title { font-weight: 600; }
-        .item .meta { font-size: 9pt; color: #888; }
-        .item .desc { font-size: 9.5pt; color: #444; margin-top: 3px; }
-        .item ul { padding-left: 16px; font-size: 9.5pt; color: #444; }
+        .item { margin-bottom: 10px; }
+        .item-header { display: flex; justify-content: space-between; align-items: baseline; }
+        .item-title { font-weight: 600; font-size: 9.5pt; color: #0f172a; }
+        .item-meta { font-size: 8.5pt; color: #64748b; font-weight: 500; }
+        .item-desc { font-size: 9pt; color: #334155; margin-top: 2px; }
+        .item ul { padding-left: 14px; font-size: 8.8pt; color: #334155; margin-top: 2px; }
+        .item li { margin-bottom: 2px; }
 
-        .skills { font-size: 9.5pt; color: #444; }
+        .skills-cat { font-size: 8.8pt; margin-bottom: 4px; }
+        .skills-cat strong { color: #0f172a; }
     </style>
 </head>
 <body>
-    <h1>{{ personal.full_name }}</h1>
+    {% set p = (cv.personal if cv and cv.personal else personal) %}
+    <h1>{{ p.name or p.full_name }}</h1>
+    {% if p.headline %}<div class="headline">{{ p.headline }}</div>{% endif %}
     <div class="contact">
-        {{ personal.email }}{% if personal.phone %} · {{ personal.phone }}{% endif %}{% if personal.location %} · {{ personal.location }}{% endif %}{% if personal.linkedin %} · {{ personal.linkedin }}{% endif %}
+        {% if p.location %}<span>📍 {{ p.location }}</span>{% endif %}
+        {% if p.phone %}<span>📞 {{ p.phone }}</span>{% endif %}
+        {% if p.email %}<span>✉️ {{ p.email }}</span>{% endif %}
+        {% if p.linkedin %}<span>🔗 {{ p.linkedin }}</span>{% endif %}
+        {% if p.github %}<span>🐙 {{ p.github }}</span>{% endif %}
+        {% if p.portfolio %}<span>🌐 {{ p.portfolio }}</span>{% endif %}
     </div>
 
-    {% if summary %}
-    <div class="section">
-        <div class="section-title">Summary</div>
-        <p class="summary">{{ summary }}</p>
-    </div>
+    {% set s = (cv.summary if cv and cv.summary else summary) %}
+    {% if s %}
     <hr>
+    <div class="section">
+        <div class="section-title">Professional Summary</div>
+        <p class="summary">{{ s }}</p>
+    </div>
     {% endif %}
 
-    {% if experience %}
+    {% set sk = (cv.skills if cv and cv.skills else skills) %}
+    {% if sk %}
+    <hr>
     <div class="section">
-        <div class="section-title">Experience</div>
-        {% for exp in experience %}
+        <div class="section-title">Technical & Soft Skills</div>
+        {% if sk.languages_frameworks or sk.technical %}
+        <div class="skills-cat"><strong>Languages & Frameworks:</strong> {{ (sk.languages_frameworks or sk.technical) | join(', ') }}</div>
+        {% endif %}
+        {% if sk.devops_cloud %}
+        <div class="skills-cat"><strong>DevOps & Cloud:</strong> {{ sk.devops_cloud | join(', ') }}</div>
+        {% endif %}
+        {% if sk.databases %}
+        <div class="skills-cat"><strong>Databases:</strong> {{ sk.databases | join(', ') }}</div>
+        {% endif %}
+        {% if sk.concepts_tools %}
+        <div class="skills-cat"><strong>Concepts & Tools:</strong> {{ sk.concepts_tools | join(', ') }}</div>
+        {% endif %}
+        {% if sk.soft_skills or sk.soft %}
+        <div class="skills-cat"><strong>Soft Skills:</strong> {{ (sk.soft_skills or sk.soft) | join(', ') }}</div>
+        {% endif %}
+        {% if sk.languages %}
+        <div class="skills-cat"><strong>Languages:</strong> {{ sk.languages | join(', ') }}</div>
+        {% endif %}
+        {% if sk is iterable and not sk is mapping %}
+        <div class="skills-cat">{{ sk | join(', ') }}</div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% set exp = (cv.experience if cv and cv.experience else experience) %}
+    {% if exp %}
+    <hr>
+    <div class="section">
+        <div class="section-title">Professional Experience</div>
+        {% for e in exp %}
         <div class="item">
-            <div class="title">{{ exp.job_title }} — {{ exp.company }}</div>
-            <div class="meta">{{ exp.start_date }} – {{ exp.end_date or 'Present' }}</div>
-            {% if exp.description %}<div class="desc">{{ exp.description }}</div>{% endif %}
-            {% if exp.achievements %}
-            <ul>{% for a in exp.achievements %}<li>{{ a }}</li>{% endfor %}</ul>
+            <div class="item-header">
+                <span class="item-title">{{ e.company or e.company_name }} — {{ e.title or e.job_title }}</span>
+                <span class="item-meta">{{ e.period or (e.start_date ~ ' – ' ~ (e.end_date or 'Present')) }}</span>
+            </div>
+            {% if e.location %}<div class="item-meta">{{ e.location }}</div>{% endif %}
+            {% if e.bullets %}
+            <ul>{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>
+            {% elif e.description %}
+            <div class="item-desc">{{ e.description }}</div>
             {% endif %}
         </div>
         {% endfor %}
     </div>
-    <hr>
     {% endif %}
 
-    {% if education %}
+    {% set edu = (cv.education if cv and cv.education else education) %}
+    {% if edu %}
+    <hr>
     <div class="section">
         <div class="section-title">Education</div>
-        {% for edu in education %}
+        {% for ed in edu %}
         <div class="item">
-            <div class="title">{{ edu.degree }}</div>
-            <div class="meta">{{ edu.institution }} · {{ edu.graduation_year }}</div>
+            <div class="item-header">
+                <span class="item-title">{{ ed.institution }}</span>
+                <span class="item-meta">{{ ed.year or ed.graduation_year or ed.period }}</span>
+            </div>
+            <div class="item-desc">{{ ed.degree }}{% if ed.gpa %} · GPA: {{ ed.gpa }}{% endif %}</div>
         </div>
         {% endfor %}
     </div>
-    <hr>
     {% endif %}
 
-    {% if skills %}
+    {% set proj = (cv.projects if cv and cv.projects else projects) %}
+    {% if proj %}
+    <hr>
     <div class="section">
-        <div class="section-title">Skills</div>
-        <p class="skills">{{ skills | join(', ') }}</p>
+        <div class="section-title">Key Projects & Research</div>
+        {% for pr in proj %}
+        <div class="item">
+            <div class="item-header">
+                <span class="item-title">{{ pr.title }}</span>
+                <span class="item-meta">{{ pr.period }}</span>
+            </div>
+            <div class="item-desc">{{ pr.role }}{% if pr.description %} — {{ pr.description }}{% endif %}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% set vol = (cv.volunteering if cv and cv.volunteering else volunteering) %}
+    {% if vol %}
+    <hr>
+    <div class="section">
+        <div class="section-title">Volunteering & Leadership</div>
+        {% for v in vol %}
+        <div class="item">
+            <div class="item-header">
+                <span class="item-title">{{ v.organization }}</span>
+                <span class="item-meta">{{ v.period }}</span>
+            </div>
+            <div class="item-desc">{{ v.role }}{% if v.location %} ({{ v.location }}){% endif %}{% if v.description %} — {{ v.description }}{% endif %}</div>
+        </div>
+        {% endfor %}
     </div>
     {% endif %}
 </body>

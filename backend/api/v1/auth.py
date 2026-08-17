@@ -104,3 +104,28 @@ async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
 async def me(current_user: User = Depends(get_current_user)):
     """Return the current user's profile (including credits balance)."""
     return current_user
+
+
+from pydantic import BaseModel as _BM
+from fastapi import HTTPException as _HTTPException
+
+
+class ChangePasswordRequest(_BM):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password", status_code=200)
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change the current user's password after verifying the current one."""
+    if not verify_password(body.current_password, current_user.password_hash):
+        raise _HTTPException(status_code=400, detail="Current password is incorrect.")
+    if len(body.new_password) < 8:
+        raise _HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+    current_user.password_hash = hash_password(body.new_password)
+    await db.commit()
+    return {"message": "Password updated successfully."}

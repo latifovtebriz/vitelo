@@ -17,7 +17,18 @@ from core.database import get_db
 from core.errors import InsufficientCreditsError, NotFoundError
 from core.security import get_current_user
 from models.cover_letter import CoverLetter
-from models.cv import CVGeneration
+from models.cv import (
+    CVGeneration,
+    CVPersonalInfo,
+    CVExperience,
+    CVExperienceHighlight,
+    CVEducation,
+    CVProject,
+    CVCertification,
+    CVSkill,
+    CVLanguage,
+    CVCustomSection,
+)
 from models.interview_prep import InterviewPrep
 from models.user import User
 from schemas.cv import (
@@ -27,6 +38,13 @@ from schemas.cv import (
     CVUnlockRequest,
     CVUnlockResponse,
     InterviewQA,
+    BulletEnhanceRequest,
+    BulletEnhanceResponse,
+    SummaryGenerateRequest,
+    SummaryGenerateResponse,
+    ResumeParseRequest,
+    JobMatchRequest,
+    JobMatchResponse,
 )
 from services.ai_service import ai_service
 from services.pdf_service import generate_cv_pdf, generate_cover_letter_pdf
@@ -45,6 +63,7 @@ async def generate_cv(
     """
     FREE endpoint — generates AI CV + watermarked PDF.
     No credit check. Returns watermarked PDF URL immediately.
+    Saves complete relational graph into PostgreSQL.
     """
     # 1. Build input dict for AI
     input_data = body.model_dump(mode="python")
@@ -67,9 +86,11 @@ async def generate_cv(
     filename = generate_filename(str(current_user.id), "watermarked")
     watermarked_url = await upload_pdf(pdf_bytes, filename)
 
-    # 5. Save to DB
+    # 5. Save main CV Generation record
+    cv_title = body.personal.headline or f"{body.personal.name}'s Resume"
     cv = CVGeneration(
         user_id=current_user.id,
+        title=cv_title,
         status="done",
         input_data=input_data,
         ai_output=ai_output,
@@ -81,10 +102,144 @@ async def generate_cv(
         language=body.language,
     )
     db.add(cv)
+    await db.flush()  # Generate cv.id
+
+    # 5a. Save Personal Info
+    p_info = ai_output.get("personal", {})
+    personal_record = CVPersonalInfo(
+        cv_id=cv.id,
+        full_name=p_info.get("name") or body.personal.name,
+        email=p_info.get("email") or body.personal.email,
+        phone=p_info.get("phone") or body.personal.phone,
+        location=p_info.get("location") or body.personal.location,
+        linkedin_url=p_info.get("linkedin") or body.personal.linkedin,
+        portfolio_url=p_info.get("portfolio") or body.personal.portfolio or body.personal.github,
+        summary=ai_output.get("summary") or body.summary or body.personal.summary,
+    )
+    db.add(personal_record)
+
+    # 5b. Save Experiences & Highlights
+    exp_list = ai_output.get("experience", []) or input_data.get("experience", [])
+    for idx, exp_data in enumerate(exp_list):
+        exp_record = CVExperience(
+            cv_id=cv.id,
+            job_title=exp_data.get("title") or exp_data.get("job_title", "Software Engineer"),
+            company=exp_data.get("company", ""),
+            location=exp_data.get("location"),
+            start_date=exp_data.get("period", "").split("–")[0].strip() if "–" in exp_data.get("period", "") else exp_data.get("start_date", ""),
+            end_date=exp_data.get("period", "").split("–")[1].strip() if "–" in exp_data.get("period", "") else exp_data.get("end_date"),
+            is_current=exp_data.get("is_current", False) or "Present" in str(exp_data.get("period", "")),
+            display_order=idx,
+        )
+        db.add(exp_record)
+        await db.flush()
+
+        bullets = exp_data.get("bullets", []) or exp_data.get("achievements", [])
+        if not bullets and exp_data.get("description"):
+            bullets = [exp_data.get("description")]
+
+        for b_idx, bullet in enumerate(bullets):
+            if bullet:
+                db.add(CVExperienceHighlight(
+                    experience_id=exp_record.id,
+                    highlight_text=bullet,
+                    display_order=b_idx,
+                ))
+
+    # 5c. Save Education
+    edu_list = ai_output.get("education", []) or input_data.get("education", [])
+    for idx, edu_data in enumerate(edu_list):
+        edu_record = CVEducation(
+            cv_id=cv.id,
+            institution=edu_data.get("institution", ""),
+            degree=edu_data.get("degree", ""),
+            graduation_year=str(edu_data.get("year") or edu_data.get("graduation_year", "")),
+            gpa=str(edu_data.get("gpa")) if edu_data.get("gpa") else None,
+            display_order=idx,
+        )
+        db.add(edu_record)
+
+    # 5d. Save Projects & Research
+    proj_list = ai_output.get("projects", []) or input_data.get("projects", [])
+    for idx, proj_data in enumerate(proj_list):
+        db.add(CVProject(
+            cv_id=cv.id,
+            title=proj_data.get("title", ""),
+            role=proj_data.get("role"),
+            description=proj_data.get("description", "") or proj_data.get("role", ""),
+            project_url=proj_data.get("url") or proj_data.get("project_url"),
+            display_order=idx,
+        ))
+
+    # 5e. Save Skills
+    skills_obj = ai_output.get("skills", {})
+    skill_order = 0
+    if isinstance(skills_obj, dict):
+        for cat_name, skill_items in skills_obj.items():
+            if isinstance(skill_items, list):
+                for skill_name in skill_items:
+                    if skill_name:
+                        db.add(CVSkill(
+                            cv_id=cv.id,
+                            name=str(skill_name).strip(),
+                            category=cat_name,
+                            display_order=skill_order,
+                        ))
+                        skill_order += 1
+    elif isinstance(skills_obj, list):
+        for s in skills_obj:
+            if s:
+                db.add(CVSkill(cv_id=cv.id, name=str(s).strip(), category="General", display_order=skill_order))
+                skill_order += 1
+
+    # 5f. Save Languages
+    lang_list = ai_output.get("languages", []) or input_data.get("languages", [])
+    if isinstance(skills_obj, dict) and skills_obj.get("languages"):
+        for l in skills_obj["languages"]:
+            if l:
+                db.add(CVLanguage(cv_id=cv.id, name=str(l).strip(), proficiency="Professional"))
+    for l_item in lang_list:
+        if isinstance(l_item, dict):
+            db.add(CVLanguage(cv_id=cv.id, name=l_item.get("name", ""), proficiency=l_item.get("proficiency", "Professional")))
+        elif isinstance(l_item, str) and l_item:
+            db.add(CVLanguage(cv_id=cv.id, name=l_item, proficiency="Professional"))
+
+    # 5g. Save Volunteering & Leadership as Custom Sections
+    vol_list = ai_output.get("volunteering", []) or input_data.get("volunteering", [])
+    for idx, vol_data in enumerate(vol_list):
+        org = vol_data.get("organization", "")
+        role = vol_data.get("role", "")
+        loc = vol_data.get("location", "")
+        period = vol_data.get("period", "")
+        desc = vol_data.get("description", "")
+        full_content = f"{role} at {org}"
+        if loc:
+            full_content += f" ({loc})"
+        if period:
+            full_content += f" | {period}"
+        if desc:
+            full_content += f" — {desc}"
+        db.add(CVCustomSection(
+            cv_id=cv.id,
+            section_title="Volunteering & Leadership",
+            content=full_content,
+            display_order=idx,
+        ))
+
+    # 5h. Save Certifications
+    certs = ai_output.get("certifications", []) or input_data.get("certifications", [])
+    for idx, cert_name in enumerate(certs):
+        if cert_name:
+            db.add(CVCertification(
+                cv_id=cv.id,
+                name=str(cert_name).strip(),
+                display_order=idx,
+            ))
+
     await db.commit()
     await db.refresh(cv)
 
-    logger.info(f"CV generated: id={cv.id} ats_score={ats_score}")
+    logger.info(f"CV generated & stored in relational database: id={cv.id} ats_score={ats_score}")
 
     return CVGenerateResponse(
         cv_id=cv.id,
@@ -314,3 +469,105 @@ async def tailor_cv(
         "ai_output": tailored_data,
         "watermarked_pdf_url": watermarked_url,
     }
+
+
+@router.post("/ai/enhance-bullet", response_model=BulletEnhanceResponse)
+async def enhance_bullet(body: BulletEnhanceRequest):
+    """AI endpoint to convert rough bullet into 3 action-verb + metric driven options."""
+    bullets = await ai_service.enhance_bullet_point(
+        raw_bullet=body.bullet,
+        job_title=body.job_title or "",
+        company=body.company or "",
+    )
+    return BulletEnhanceResponse(bullets=bullets)
+
+
+@router.post("/ai/generate-summary", response_model=SummaryGenerateResponse)
+async def generate_summary(body: SummaryGenerateRequest):
+    """AI endpoint to generate 3 tailored professional summary options."""
+    summaries = await ai_service.generate_summary_options(
+        headline=body.headline or "",
+        skills=body.skills or [],
+        experiences=body.experiences or [],
+    )
+    return SummaryGenerateResponse(summaries=summaries)
+
+
+@router.post("/ai/parse-resume")
+async def parse_resume(body: ResumeParseRequest):
+    """AI endpoint to parse raw resume text into structured builder data."""
+    parsed_data = await ai_service.parse_resume_text(body.text)
+    return parsed_data
+
+
+@router.post("/ai/match-job", response_model=JobMatchResponse)
+async def match_job_description(body: JobMatchRequest, db: AsyncSession = Depends(get_db)):
+    """AI endpoint to match a CV against a job description and return missing skills/gaps."""
+    cv_data = body.cv_data
+    if not cv_data and body.cv_id:
+        result = await db.execute(select(CVGeneration).where(CVGeneration.id == body.cv_id))
+        cv_record = result.scalar_one_or_none()
+        if cv_record:
+            cv_data = cv_record.ai_output
+    if not cv_data:
+        cv_data = {}
+    analysis = await ai_service.analyze_job_match(cv_data=cv_data, job_desc=body.job_description)
+    return JobMatchResponse(
+        match_score=analysis.get("match_score", 75),
+        matched_skills=analysis.get("matched_skills", []),
+        missing_skills=analysis.get("missing_skills", []),
+        gap_analysis=analysis.get("gap_analysis", ""),
+        recommendation=analysis.get("recommendation", "")
+    )
+
+
+# ── Delete CV ─────────────────────────────────────────────────────────────────
+
+@router.delete("/{cv_id}", status_code=204)
+async def delete_cv(
+    cv_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Permanently delete a CV and all its relational data."""
+    result = await db.execute(
+        select(CVGeneration).where(
+            CVGeneration.id == cv_id,
+            CVGeneration.user_id == current_user.id,
+        )
+    )
+    cv = result.scalar_one_or_none()
+    if not cv:
+        raise NotFoundError("CV")
+    await db.delete(cv)
+    await db.commit()
+    return None
+
+
+# ── Rename CV ─────────────────────────────────────────────────────────────────
+
+class CVRenameRequest(_BaseModel):
+    title: str
+
+
+@router.patch("/{cv_id}/title", response_model=CVListItem)
+async def rename_cv(
+    cv_id: uuid.UUID,
+    body: CVRenameRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Rename a CV."""
+    result = await db.execute(
+        select(CVGeneration).where(
+            CVGeneration.id == cv_id,
+            CVGeneration.user_id == current_user.id,
+        )
+    )
+    cv = result.scalar_one_or_none()
+    if not cv:
+        raise NotFoundError("CV")
+    cv.title = body.title.strip()[:100]
+    await db.commit()
+    await db.refresh(cv)
+    return cv

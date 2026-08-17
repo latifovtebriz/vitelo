@@ -9,6 +9,9 @@ from api.v1.job_match import router as job_match_router
 from api.v1.billing import router as billing_router
 from api.v1.user import router as user_router
 from api.v1.b2b import router as b2b_router
+from api.v1.tracker import router as tracker_router
+from api.v1.interview import router as interview_router
+from api.v1.salary import router as salary_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -19,3 +22,6 @@ api_router.include_router(job_match_router, prefix="/job-match", tags=["Job Matc
 api_router.include_router(billing_router, prefix="/billing", tags=["Billing"])
 api_router.include_router(user_router, prefix="/user", tags=["User"])
 api_router.include_router(b2b_router, prefix="/b2b", tags=["B2B"])
+api_router.include_router(tracker_router, prefix="/tracker", tags=["Job Tracker"])
+api_router.include_router(interview_router, prefix="/interview", tags=["Interview Prep"])
+api_router.include_router(salary_router, prefix="/salary", tags=["Salary Analyzer"])
