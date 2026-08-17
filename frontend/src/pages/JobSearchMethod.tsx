@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import {
-  Target, FileText, Search, Brain, Sparkles, ArrowRight,
-  CheckCircle2, Circle, ChevronRight, BookOpen, Lightbulb,
+  Target, FileText, Brain, Sparkles, ArrowRight,
+  CheckCircle2, ChevronRight, BookOpen, Lightbulb,
   DollarSign, Linkedin, Mail, Users, TrendingUp,
 } from 'lucide-react';
 

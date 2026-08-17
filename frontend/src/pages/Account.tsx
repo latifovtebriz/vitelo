@@ -4,10 +4,11 @@ import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import DashboardLayout from '../components/DashboardLayout';
 import {
-  Shield, CreditCard, AlertTriangle, User, Lock,
+  CreditCard, AlertTriangle, User, Lock,
   Check, Loader2, Bell, ChevronRight, Sparkles,
   Coins, Eye, EyeOff, LogOut, Trash2, ExternalLink,
 } from 'lucide-react';
+
 
 type Section = 'profile' | 'security' | 'billing' | 'notifications';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import {
   LayoutDashboard, FileText, Briefcase, ClipboardList, Brain,
@@ -31,7 +31,7 @@ interface Props { children: React.ReactNode; activeKey?: string; }
 export default function DashboardLayout({ children, activeKey }: Props) {
   const { user, logout } = useAuthStore();
   const location = useLocation();
-  const navigate = useNavigate();
+
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>('documents');

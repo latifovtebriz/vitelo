@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import {
-  Search, MapPin, Clock, Heart, Briefcase, Filter,
-  Building2, Globe, Users, ChevronRight, Sparkles,
+  Search, MapPin, Clock, Heart, Briefcase,
+  Globe, Users, ChevronRight, Sparkles,
   CheckCircle2, AlertCircle, X, SlidersHorizontal,
 } from 'lucide-react';
 

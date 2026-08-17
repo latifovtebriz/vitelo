@@ -8,7 +8,7 @@ import {
   FileText, PlusCircle, Sparkles, ArrowRight, Star,
   MapPin, Clock, Brain, ClipboardList, DollarSign,
   TrendingUp, CheckCircle2, Loader2, ChevronRight,
-  Coins, FileDown, Eye, BookOpen, Target,
+  Coins, FileDown, Eye, Target,
 } from 'lucide-react';
 
 interface CV {

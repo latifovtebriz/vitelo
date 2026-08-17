@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import DashboardLayout from '../components/DashboardLayout';
 import {
@@ -88,7 +88,7 @@ function ContextMenu({
 
 export default function Documents() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'covers' ? 'covers' : 'resumes');
   const [cvs, setCvs] = useState<CV[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,7 +223,7 @@ export default function Documents() {
               {cvs.map(cv => {
                 const ats = cv.ats_score ? atsBadge(cv.ats_score) : null;
                 const isRenaming = renamingId === cv.id;
-                const isDeleting = deletingId === cv.id;
+                const _isDeleting = deletingId === cv.id;
 
                 return (
                   <div key={cv.id}
