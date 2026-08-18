@@ -117,6 +117,28 @@ export default function GenerateCoverLetter() {
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+    logger.action('GenerateCoverLetter', 'Downloaded TXT', { company: companyName });
+  };
+
+  const handleDownloadDoc = () => {
+    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>Cover Letter</title>
+    <style>body{font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1e293b; padding: 40px; max-width: 650px; margin: auto;}</style>
+    </head><body><p style='font-weight: bold; font-size: 14pt; color: #0f172a; margin-bottom: 20px;'>Application for ${jobTitle || 'Role'} — ${companyName || 'Organization'}</p>${letterContent.replace(/\n/g, '<br/>')}</body></html>`;
+    const blob = new Blob(['\ufeff', header], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Cover_Letter_${companyName || 'Vitelo'}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    logger.action('GenerateCoverLetter', 'Downloaded Word .doc', { company: companyName });
+  };
+
+  const handleDownloadPdf = () => {
+    logger.action('GenerateCoverLetter', 'Printed/Exported PDF', { company: companyName });
+    window.print();
   };
 
   const wordCount = letterContent ? letterContent.trim().split(/\s+/).length : 0;
@@ -148,13 +170,28 @@ export default function GenerateCoverLetter() {
                   className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                  {copied ? 'Copied!' : 'Copy Text'}
+                  {copied ? 'Copied!' : 'Copy'}
                 </button>
                 <button
                   onClick={handleDownloadTxt}
                   className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+                  title="Download raw plain text"
                 >
-                  <Download className="w-3.5 h-3.5 text-slate-500" /> Download (.txt)
+                  <Download className="w-3.5 h-3.5 text-slate-500" /> .txt
+                </button>
+                <button
+                  onClick={handleDownloadDoc}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+                  title="Download editable Microsoft Word .doc"
+                >
+                  <FileText className="w-3.5 h-3.5 text-blue-600" /> Word (.doc)
+                </button>
+                <button
+                  onClick={handleDownloadPdf}
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+                  title="Print / Save as PDF"
+                >
+                  <Download className="w-3.5 h-3.5 text-white" /> PDF
                 </button>
                 {letterId && (
                   <button
@@ -163,7 +200,7 @@ export default function GenerateCoverLetter() {
                     className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5"
                   >
                     {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    {savedSuccess ? 'Saved to Docs!' : 'Save Changes'}
+                    {savedSuccess ? 'Saved!' : 'Save'}
                   </button>
                 )}
               </>

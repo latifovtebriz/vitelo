@@ -20,20 +20,22 @@ from models.user import User
 logger = logging.getLogger("vitelo.billing")
 settings = get_settings()
 
-# Tier → price mapping (for record keeping)
+# Tier → price and credits mapping
 TIER_PRICES = {
     "basic": "4.99",
     "pro": "7.99",
     "ultimate": "12.99",
 }
 
+TIER_CREDITS = {
+    "basic": 3,
+    "pro": 5,
+    "ultimate": 8,
+}
+
 
 def verify_webhook_signature(payload: bytes, signature: str) -> bool:
-    """Verify Lemon Squeezy HMAC-SHA256 webhook signature.
-
-    Lemon Squeezy sends:  X-Signature: <hex-digest>
-    We compute:           HMAC-SHA256(secret, raw_body)
-    """
+    """Verify Lemon Squeezy HMAC-SHA256 webhook signature."""
     if not signature:
         return False
 
@@ -43,20 +45,12 @@ def verify_webhook_signature(payload: bytes, signature: str) -> bool:
 
 
 def get_tier_from_order(order_data: dict) -> str:
-    """Map Lemon Squeezy product name → internal tier string.
-
-    Checks meta.product_name or first_order_item.product_name.
-    Falls back to "basic" if unclear.
-    """
-    # Try to get product name from various LS payload paths
+    """Map Lemon Squeezy product name → internal tier string."""
     product_name: str = ""
-
-    # Path 1: data.attributes.first_order_item.product_name
     attributes = order_data.get("data", {}).get("attributes", {})
     first_item = attributes.get("first_order_item", {})
     product_name = first_item.get("product_name", "")
 
-    # Path 2: meta.product_name (custom data)
     if not product_name:
         product_name = order_data.get("meta", {}).get("product_name", "")
 
@@ -76,13 +70,7 @@ async def process_payment(
     tier: str,
     ls_order_id: str,
 ) -> Transaction | None:
-    """Idempotently process a completed Lemon Squeezy order.
-
-    Returns None if already processed (duplicate webhook).
-    Returns Transaction on success.
-    Credits += 1 for every paid order.
-    """
-    # Idempotency — check if already processed
+    """Idempotently process a completed Lemon Squeezy order."""
     existing = await db.execute(
         select(Transaction).where(Transaction.lemon_squeezy_id == ls_order_id)
     )
@@ -90,24 +78,23 @@ async def process_payment(
         logger.info(f"Duplicate webhook ignored: ls_order_id={ls_order_id}")
         return None
 
-    # Create transaction record
     from decimal import Decimal
-    amount = Decimal(TIER_PRICES.get(tier, "3.00"))
+    amount = Decimal(TIER_PRICES.get(tier, "4.99"))
+    credits_to_grant = TIER_CREDITS.get(tier, 1)
 
     txn = Transaction(
         user_id=user_id,
         tier=tier,
         amount_usd=amount,
-        credits_granted=1,
+        credits_granted=credits_to_grant,
         lemon_squeezy_id=ls_order_id,
         status="completed",
     )
     db.add(txn)
 
-    # Add credits to user
     user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one()
-    user.credits += 1
+    user.credits += credits_to_grant
 
-    logger.info(f"Payment processed: user={user.email} tier={tier} order={ls_order_id}")
+    logger.info(f"Payment processed: user={user.email} tier={tier} credits_added={credits_to_grant} balance={user.credits}")
     return txn

@@ -256,3 +256,77 @@ async def add_job_to_kanban_tracker(
         "company": app_card.company,
         "role": app_card.role,
     }
+
+
+# ── Job URL Scraper & 1-Click Resume Tailor ───────────────────────────────────
+
+class ScrapeAndTailorRequest(BaseModel):
+    job_url: Optional[str] = None
+    job_text: Optional[str] = None
+    cv_data: dict
+
+
+@router.post("/scrape-and-tailor")
+async def scrape_and_tailor(
+    body: ScrapeAndTailorRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Scrape job description from URL or parse text, then tailor CV with Gemini AI."""
+    import re
+    import httpx
+    from services.ai_service import ai_service
+    from models.log import AppLog
+
+    extracted_text = body.job_text or ""
+
+    if body.job_url and not extracted_text.strip():
+        try:
+            async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                }
+                resp = await client.get(body.job_url, headers=headers)
+                if resp.status_code == 200:
+                    html = resp.text
+                    # Strip scripts & styles
+                    cleaned = re.sub(r"<(script|style).*?>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
+                    # Strip all HTML tags
+                    clean_text = re.sub(r"<[^>]+>", " ", cleaned)
+                    # Normalize whitespace
+                    extracted_text = re.sub(r"\s+", " ", clean_text).strip()[:4000]
+        except Exception as e:
+            extracted_text = f"Target Job Posting from URL: {body.job_url}"
+
+    if not extracted_text.strip():
+        extracted_text = "Target Engineering Role with standard industry best practices."
+
+    # Call AI tailoring
+    tailored_result = await ai_service.tailor_cv_to_job_description(
+        cv_data=body.cv_data,
+        job_text=extracted_text,
+    )
+
+    # Log action to database
+    try:
+        log_entry = AppLog(
+            level="ACTION",
+            category="job_tailoring",
+            user_id=current_user.id,
+            user_email=current_user.email,
+            page_url="/jobs",
+            component="ScrapeAndTailor",
+            message=f"Tailored CV for '{tailored_result.get('extracted_job_info', {}).get('job_title', 'Role')}'",
+            payload={
+                "job_url": body.job_url,
+                "score_before": tailored_result.get("match_score_before"),
+                "score_after": tailored_result.get("match_score_after"),
+            },
+        )
+        db.add(log_entry)
+        await db.commit()
+    except Exception:
+        pass
+
+    return tailored_result
+

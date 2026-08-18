@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Menu, X, Coins, ChevronDown, Sparkles, FileText, Wand2, ArrowRight, Layout, Star, BookOpen, Play, Headphones } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import LanguageSelector from './LanguageSelector';
 
 /* ═══════════════════════════════════════════════════
    MEGA-MENU DATA
@@ -179,7 +180,8 @@ export default function Navbar() {
           </nav>
 
           {/* Desktop Right */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2.5">
+            <LanguageSelector />
             {isAuthenticated ? (
               <>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-sm font-semibold text-amber-700">
@@ -203,24 +205,27 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-                <Link to="/generate" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all">
-                  <Sparkles className="w-3.5 h-3.5" /> My Account
+                <Link to="/dashboard" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all">
+                  <Sparkles className="w-3.5 h-3.5" /> Dashboard
                 </Link>
               </>
             ) : (
               <>
-                <Link to="/login" className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Log in</Link>
-                <Link to="/register" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all">
-                  <Sparkles className="w-3.5 h-3.5" /> My Account
+                <Link to="/login" className="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Log in</Link>
+                <Link to="/register" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-sm hover:shadow-md transition-all">
+                  <Sparkles className="w-3.5 h-3.5" /> Start Free
                 </Link>
               </>
             )}
           </div>
 
           {/* Mobile toggle */}
-          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100">
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          <div className="flex md:hidden items-center gap-2">
+            <LanguageSelector />
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100">
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -541,6 +541,26 @@ export default function GenerateCV() {
     }
   };
 
+  // Apply full tailored data from Job Matcher
+  const handleApplyTailoredData = (tailored: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      personal: {
+        ...prev.personal,
+        summary: tailored.tailored_summary || prev.personal.summary,
+      },
+      experience: tailored.tailored_experience?.length
+        ? tailored.tailored_experience.map((te: any, i: number) => ({
+            ...(prev.experience[i] || {}),
+            job_title: te.job_title || prev.experience[i]?.job_title || '',
+            company: te.company || prev.experience[i]?.company || '',
+            description: te.description || (te.bullets ? te.bullets.join('\n') : prev.experience[i]?.description || ''),
+          }))
+        : prev.experience,
+      target_job: tailored.extracted_job_info?.job_title || prev.target_job,
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-6 px-3 sm:px-6 lg:px-8">
       {/* Top Header Card with Tools */}
@@ -1558,6 +1578,7 @@ export default function GenerateCV() {
         cvData={formData}
         onClose={() => setJobMatchOpen(false)}
         onAddSkill={handleAddMissingSkill}
+        onApplyTailoredData={handleApplyTailoredData}
       />
     </div>
   );

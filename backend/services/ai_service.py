@@ -482,8 +482,50 @@ async def optimize_linkedin_profile(self, cv_data: dict) -> dict:
     return self._parse_json(raw)
 
 
+JOB_TAILOR_SYSTEM_PROMPT = """You are an elite ATS Optimization and Career Positioning Expert.
+Your task is to analyze a candidate's CV against a target Job Description (or scraped job posting text), identify keyword gaps, and tailor the CV to maximize the ATS match score to 90-98%.
+
+RULES:
+1. Output ONLY valid JSON matching the exact schema.
+2. Naturally weave required technical keywords and domain terminology into accomplishments.
+3. Use active Google XYZ metric structures (Accomplished X, measured by Y, by doing Z).
+4. Do not invent fictitious degrees or companies; enhance phrasing and relevance of real experience.
+
+OUTPUT JSON SCHEMA:
+{
+  "extracted_job_info": {
+    "job_title": str,
+    "company_name": str,
+    "key_requirements": [str]
+  },
+  "match_score_before": int,
+  "match_score_after": int,
+  "missing_keywords": [str],
+  "tailored_summary": str,
+  "tailored_experience": [
+    {
+      "job_title": str,
+      "company": str,
+      "description": str,
+      "bullets": [str]
+    }
+  ],
+  "recommended_skills_to_add": [str],
+  "ats_tailoring_summary": str
+}"""
+
+
+async def tailor_cv_to_job_description(self, cv_data: dict, job_text: str) -> dict:
+    """Tailor CV to match a job posting description and optimize ATS match score."""
+    user_content = f"TARGET JOB POSTING / DESCRIPTION:\n{job_text}\n\nCANDIDATE CV DATA:\n{json.dumps(cv_data, ensure_ascii=False, indent=2)}"
+    raw = await self._call_ai(JOB_TAILOR_SYSTEM_PROMPT, user_content)
+    return self._parse_json(raw)
+
+
 AIService.diagnose_ats_deep = diagnose_ats_deep
 AIService.evaluate_interview_answer = evaluate_interview_answer
 AIService.translate_cv = translate_cv
 AIService.optimize_linkedin_profile = optimize_linkedin_profile
+AIService.tailor_cv_to_job_description = tailor_cv_to_job_description
+
 

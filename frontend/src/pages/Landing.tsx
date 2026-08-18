@@ -1,17 +1,17 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, Star, ChevronDown, ChevronUp, CheckCircle2, Zap } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  ArrowRight,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  Sparkles,
+} from 'lucide-react';
 import Navbar from '../components/ui/Navbar';
 import Footer from '../components/ui/Footer';
-
-// ── Data ───────────────────────────────────────────────────────────────────────
-
-const STATS = [
-  { value: '10,000+', label: 'CVs Created' },
-  { value: '4.8★', label: 'Average Rating' },
-  { value: '95%', label: 'ATS Pass Rate' },
-  { value: '50+', label: 'Countries' },
-];
+import LiveScannerWidget from '../components/landing/LiveScannerWidget';
+import { useLanguageStore } from '../stores/languageStore';
 
 const TESTIMONIALS = [
   {
@@ -54,7 +54,7 @@ const TESTIMONIALS = [
     name: 'Mehmet Yıldız',
     city: 'Ankara, TR',
     role: 'Project Manager',
-    text: 'Türkçe CV\'imi İngilizceye çevirip ATS için optimize etti. 2 hafta içinde Dubai\'dan iş teklifi aldım. Harika bir araç!',
+    text: "Türkçe CV'imi İngilizceye çevirip ATS için optimize etti. 2 hafta içinde Dubai'dan iş teklifi aldım. Harika bir araç!",
     stars: 5,
     initials: 'MY',
     color: 'from-violet-500 to-purple-500',
@@ -72,233 +72,306 @@ const TESTIMONIALS = [
 
 const FAQ_ITEMS = [
   {
-    q: 'Is Vitelo really free?',
-    a: 'Yes! Creating your CV and viewing a watermarked preview is completely free — no credit card required. You only pay when you want to download the clean, high-resolution PDF. Plans start from just $3.',
+    q: 'Is Vitelo really free to start?',
+    a: 'Yes! Creating your CV and viewing a real-time live preview is completely free — no credit card required. You get 1 free clean download, and can upgrade for higher limits starting at $3.99.',
   },
   {
-    q: 'How does the AI write my CV?',
-    a: 'Vitelo uses Google\'s Gemini 1.5 Flash AI model. You fill in your basic information, and the AI transforms it into professional, ATS-optimized bullet points with strong action verbs and quantified achievements. It writes better than most professional CV writers.',
+    q: 'How does the AI optimize for ATS systems?',
+    a: 'Vitelo uses Gemini AI trained on 50,000+ successful tech and business resumes. It structures bullet points using the Google XYZ formula (Accomplished X, measured by Y, by doing Z) and injects target keywords from real job descriptions.',
   },
   {
-    q: 'What is an ATS score and why does it matter?',
-    a: 'An Applicant Tracking System (ATS) is software used by 98% of Fortune 500 companies to automatically filter CVs before a human sees them. Vitelo checks your CV against 40+ ATS criteria and gives you a score from 0-100. A score above 80 means you\'ll pass most ATS filters.',
+    q: 'Can I translate my resume between Azerbaijani, Turkish, and English?',
+    a: 'Yes! Our built-in AI Translator converts your experience into fluent executive English, German, Turkish, or Azerbaijani while keeping all technical frameworks (.NET, Docker, React, AWS) intact.',
   },
   {
-    q: 'Can it translate my Azerbaijani or Turkish CV to English?',
-    a: 'Absolutely! This is one of Vitelo\'s most popular features. Simply fill in the form in Azerbaijani or Turkish, and the AI automatically translates and professionalize everything into polished English. Perfect for applying to international jobs.',
-  },
-  {
-    q: 'How is Vitelo different from Zety or Resume.io?',
-    a: 'Vitelo uses cutting-edge AI to actually write your CV content, not just format it. We offer AI-powered ATS scoring, automatic translation from AZ/TR to EN, cover letter generation, and interview prep — all at up to 5x lower prices than Zety. We also support payment from Azerbaijan (Lemon Squeezy).',
+    q: 'What is the difference between Basic, Pro, and Ultimate plans?',
+    a: 'Basic gives you up to 3 CVs + 3 Cover Letters with clean templates. Pro expands to 5 CVs + 5 Cover Letters with Pro templates and 1-Click Job URL tailoring. Ultimate gives you 8 CVs + 8 Cover Letters, AI Multilingual Translation, LinkedIn Profile Optimizer, and Mock Interview simulator.',
   },
 ];
-
-const HOW_IT_WORKS = [
-  { icon: '📝', step: '1', title: 'Fill Your Details', desc: 'Enter your experience and skills in any language. Takes under 5 minutes.' },
-  { icon: '🤖', step: '2', title: 'AI Optimizes', desc: 'Gemini AI rewrites everything into ATS-ready, professional English.' },
-  { icon: '📄', step: '3', title: 'Download & Apply', desc: 'Get a clean PDF. Apply with confidence to top companies worldwide.' },
-];
-
-// ── Component ────────────────────────────────────────────────────────────────
-
-function FAQItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className={`border rounded-xl transition-all duration-200 ${open ? 'border-blue-200 bg-blue-50/50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-6 py-5 text-left"
-      >
-        <span className={`text-base font-semibold ${open ? 'text-blue-700' : 'text-slate-800'}`}>{q}</span>
-        {open
-          ? <ChevronUp className="w-5 h-5 text-blue-500 flex-shrink-0" />
-          : <ChevronDown className="w-5 h-5 text-slate-400 flex-shrink-0" />
-        }
-      </button>
-      {open && (
-        <div className="px-6 pb-5">
-          <p className="text-slate-600 leading-relaxed">{a}</p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function Landing() {
+  const { t } = useLanguageStore();
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const toggleFaq = (index: number) => {
+    setOpenFaq(openFaq === index ? null : index);
+  };
+
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900">
+    <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900 flex flex-col">
       <Navbar />
 
-      {/* ── Hero ── */}
-      <section className="pt-28 pb-20 px-4 sm:px-6 bg-gradient-to-b from-slate-50 via-blue-50/30 to-white overflow-hidden relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.12),rgba(255,255,255,0))]" />
-        <div className="max-w-4xl mx-auto text-center relative">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold border border-blue-200">
-            <Zap className="w-3.5 h-3.5" />
-            AI-Powered · ATS-Optimized · Free to Start
+      {/* ── HERO SECTION ── */}
+      <section className="relative pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-slate-50/80 via-white to-slate-50/50">
+        <div className="max-w-6xl mx-auto text-center relative z-10">
+          {/* Trust Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-700 text-xs sm:text-sm font-extrabold mb-6 shadow-xs animate-fade-in">
+            <Sparkles className="w-4 h-4 text-blue-600" />
+            {t.hero.badge}
           </div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-tight mb-6">
-            Build a{' '}
-            <span className="relative">
-              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                job-winning CV
-              </span>
-              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 8" fill="none">
-                <path d="M0 6 Q75 2 150 5 Q225 8 300 4" stroke="url(#grad)" strokeWidth="2.5" strokeLinecap="round" />
-                <defs>
-                  <linearGradient id="grad" x1="0" x2="300" y1="0" y2="0" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#2563eb"/><stop offset="1" stopColor="#7c3aed"/>
-                  </linearGradient>
-                </defs>
-              </svg>
+          {/* Heading */}
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6">
+            {t.hero.titleStart}{' '}
+            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              {t.hero.titleHighlight}
             </span>{' '}
-            with AI
+            {t.hero.titleEnd}
           </h1>
 
-          <p className="text-xl text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Fill in your details — our AI writes, translates, and ATS-optimizes your CV in seconds. Used by 10,000+ job seekers from Baku to London.
+          {/* Subtitle */}
+          <p className="text-base sm:text-xl text-slate-600 max-w-3xl mx-auto mb-9 leading-relaxed font-normal">
+            {t.hero.subtitle}
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/generate" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 hover:-translate-y-0.5 transition-all duration-200">
-              Create Your CV — It's Free
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-8">
+            <Link
+              to="/generate"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-base shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 transition-all hover:-translate-y-0.5"
+            >
+              {t.hero.ctaPrimary} <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link to="/examples" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-base hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 shadow-sm">
-              View CV Examples
+
+            <Link
+              to="/examples"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl border border-slate-200 bg-white text-slate-700 font-bold text-base hover:bg-slate-50 hover:border-slate-300 transition-all shadow-xs"
+            >
+              {t.hero.ctaSecondary}
             </Link>
           </div>
 
-          <p className="mt-5 text-sm text-slate-400">✓ No credit card · ✓ No sign up needed to preview · ✓ ATS scored instantly</p>
-        </div>
-      </section>
+          <p className="text-xs text-slate-400 font-medium">{t.hero.trustBadge}</p>
 
-      {/* ── Stats Bar ── */}
-      <section className="py-10 border-y border-slate-100 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {STATS.map(stat => (
-              <div key={stat.label} className="text-center">
-                <p className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{stat.value}</p>
-                <p className="text-sm text-slate-500 font-medium mt-0.5">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How it Works ── */}
-      <section className="py-20 px-4 sm:px-6 bg-slate-50">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900">How it works</h2>
-            <p className="mt-3 text-lg text-slate-500">From blank page to job-ready CV in 3 steps</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {HOW_IT_WORKS.map(step => (
-              <div key={step.step} className="relative bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-center group hover:shadow-md hover:-translate-y-1 transition-all duration-200">
-                <div className="text-4xl mb-4">{step.icon}</div>
-                <div className="absolute top-4 right-4 w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">{step.step}</div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">{step.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-14 pt-10 border-t border-slate-200/80">
+            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-2xs">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900">10,000+</p>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">{t.hero.statCvs}</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-2xs">
+              <p className="text-2xl sm:text-3xl font-black text-amber-500 flex items-center justify-center gap-1">
+                4.8 <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+              </p>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">{t.hero.statRating}</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-2xs">
+              <p className="text-2xl sm:text-3xl font-black text-emerald-600">95%+</p>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">{t.hero.statPass}</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-2xs">
+              <p className="text-2xl sm:text-3xl font-black text-blue-600">50+</p>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">{t.hero.statCountries}</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <section className="py-20 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900">Everything you need to land the job</h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: '🤖', title: 'AI CV Writing', desc: 'Gemini AI transforms your raw notes into polished, professional bullet points with action verbs.' },
-              { icon: '🌐', title: 'AZ / TR → EN Translation', desc: 'Write in Azerbaijani or Turkish. AI automatically translates to professional English.' },
-              { icon: '📊', title: 'ATS Score (0–100)', desc: 'Know exactly how your CV performs against Applicant Tracking Systems before applying.' },
-              { icon: '✉️', title: 'Cover Letter Generator', desc: 'Personalized cover letter matching your CV to the specific job description. Pro plan.' },
-              { icon: '🎤', title: 'Interview Prep', desc: '5 custom interview Q&As generated from your CV and job description. Ultimate plan.' },
-              { icon: '💰', title: 'AZ-Friendly Payments', desc: 'Pay in USD via Lemon Squeezy from Azerbaijan. Starts at just $3 per CV.' },
-            ].map(f => (
-              <div key={f.title} className="border border-slate-200 rounded-2xl p-6 bg-white hover:shadow-md hover:border-blue-200 transition-all duration-200 group">
-                <div className="text-3xl mb-3">{f.icon}</div>
-                <h3 className="font-bold text-slate-800 mb-1.5 group-hover:text-blue-600 transition-colors">{f.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ── */}
-      <section className="py-20 px-4 sm:px-6 bg-slate-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900">What job seekers are saying</h2>
-            <p className="mt-3 text-slate-500 text-lg">Real results from real people across the world</p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
-                    {t.initials}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm">{t.name}</p>
-                    <p className="text-xs text-slate-500">{t.role} · {t.city}</p>
-                  </div>
-                </div>
-                <div className="flex gap-0.5 mb-3">
-                  {Array.from({ length: t.stars }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-slate-600 text-sm leading-relaxed">"{t.text}"</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pricing ── */}
-      <section className="py-20 px-4 sm:px-6 bg-white">
+      {/* ── 10-SECOND LIVE ATS SCANNER WIDGET ── */}
+      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-slate-950 relative">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900">Simple, transparent pricing</h2>
-            <p className="mt-3 text-slate-500 text-lg">Start free. Pay only when you're ready to download your perfect CV.</p>
+          <LiveScannerWidget />
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-y border-slate-200/80">
+        <div className="max-w-5xl mx-auto text-center">
+          <span className="text-xs font-extrabold text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+            {t.howItWorks.tag}
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mt-3 mb-3">
+            {t.howItWorks.title}
+          </h2>
+          <p className="text-slate-600 text-sm sm:text-base max-w-xl mx-auto mb-14">
+            {t.howItWorks.subtitle}
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-8 text-left">
+            <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm relative overflow-hidden">
+              <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 font-black text-lg flex items-center justify-center mb-4">
+                1
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-lg mb-2">
+                {t.howItWorks.step1Title}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                {t.howItWorks.step1Desc}
+              </p>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm relative overflow-hidden">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 font-black text-lg flex items-center justify-center mb-4">
+                2
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-lg mb-2">
+                {t.howItWorks.step2Title}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                {t.howItWorks.step2Desc}
+              </p>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm relative overflow-hidden">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 font-black text-lg flex items-center justify-center mb-4">
+                3
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-lg mb-2">
+                {t.howItWorks.step3Title}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                {t.howItWorks.step3Desc}
+              </p>
+            </div>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { name: 'Basic', price: '$3', period: '/cv', badge: null, color: 'border-slate-200', features: ['High-res PDF, no watermark', 'ATS-optimized CV', 'Gemini AI writing', 'AZ/TR → EN translation'], cta: 'Get Basic' },
-              { name: 'Pro', price: '$5.99', period: '/cv', badge: '🔥 Most Popular', color: 'border-blue-500 ring-2 ring-blue-500', features: ['Everything in Basic', 'Custom Cover Letter', 'Tone matching (formal/creative)', 'Priority support'], cta: 'Get Pro' },
-              { name: 'Ultimate', price: '$8.99', period: '/cv', badge: '🏆 Best Value', color: 'border-slate-200', features: ['Everything in Pro', '5 Interview Q&As', 'Job match analysis', 'Comprehensive prep guide'], cta: 'Get Ultimate' },
-            ].map(plan => (
-              <div key={plan.name} className={`relative rounded-2xl border-2 ${plan.color} bg-white p-7 flex flex-col`}>
-                {plan.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-1 rounded-full bg-blue-600 text-white text-xs font-bold shadow">
-                    {plan.badge}
-                  </div>
-                )}
-                <h3 className="text-xl font-bold text-slate-800 mb-1">{plan.name}</h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-extrabold text-slate-900">{plan.price}</span>
-                  <span className="text-slate-400 font-medium">{plan.period}</span>
+        </div>
+      </section>
+
+      {/* ── PRICING SECTION ── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white" id="pricing">
+        <div className="max-w-6xl mx-auto text-center">
+          <span className="text-xs font-extrabold text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+            {t.pricing.tag}
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mt-3 mb-3">
+            {t.pricing.title}
+          </h2>
+          <p className="text-slate-600 text-sm sm:text-base max-w-xl mx-auto mb-14">
+            {t.pricing.subtitle} · <span className="font-bold text-blue-600">{t.pricing.payAsYouGo}</span>
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-8 text-left items-stretch">
+            {/* Basic Plan */}
+            <div className="p-8 rounded-3xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between hover:shadow-lg transition-shadow">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-xl">{t.pricing.basicTitle}</h3>
+                <p className="text-xs text-slate-500 mt-1 mb-4">{t.pricing.basicDesc}</p>
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span className="text-4xl font-black text-slate-900">{t.pricing.basicPrice}</span>
+                  <span className="text-xs text-slate-500 font-semibold">/ package</span>
                 </div>
-                <ul className="space-y-3 flex-1 mb-6">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-slate-600">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      {f}
+                <div className="px-3 py-1 rounded-lg bg-slate-200/80 text-slate-700 text-xs font-bold mb-6 inline-block">
+                  {t.pricing.basicLimit}
+                </div>
+
+                <ul className="space-y-3 text-xs sm:text-sm text-slate-700 mb-8">
+                  {t.pricing.basicFeatures.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                      <span>{f}</span>
                     </li>
                   ))}
                 </ul>
-                <Link to="/generate" className={`w-full text-center py-3 rounded-xl text-sm font-bold transition-all ${plan.badge ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-blue-200' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
-                  {plan.cta}
-                </Link>
+              </div>
+
+              <Link
+                to="/dashboard-pricing"
+                className="w-full py-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-bold text-sm text-center transition-colors shadow-2xs"
+              >
+                {t.pricing.basicCta}
+              </Link>
+            </div>
+
+            {/* Pro Plan (Most Popular) */}
+            <div className="p-8 rounded-3xl border-2 border-blue-600 bg-white shadow-xl flex flex-col justify-between relative">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-extrabold shadow-md">
+                ⭐ MOST POPULAR
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-xl">{t.pricing.proTitle}</h3>
+                <p className="text-xs text-slate-500 mt-1 mb-4">{t.pricing.proDesc}</p>
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span className="text-4xl font-black text-blue-600">{t.pricing.proPrice}</span>
+                  <span className="text-xs text-slate-500 font-semibold">/ package</span>
+                </div>
+                <div className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold mb-6 inline-block">
+                  {t.pricing.proLimit}
+                </div>
+
+                <ul className="space-y-3 text-xs sm:text-sm text-slate-700 mb-8">
+                  {t.pricing.proFeatures.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Link
+                to="/dashboard-pricing"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-sm text-center shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all"
+              >
+                {t.pricing.proCta}
+              </Link>
+            </div>
+
+            {/* Ultimate Plan */}
+            <div className="p-8 rounded-3xl border border-purple-200 bg-gradient-to-b from-purple-50/30 to-white flex flex-col justify-between hover:shadow-lg transition-shadow">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-xl">{t.pricing.ultimateTitle}</h3>
+                <p className="text-xs text-slate-500 mt-1 mb-4">{t.pricing.ultimateDesc}</p>
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span className="text-4xl font-black text-purple-700">
+                    {t.pricing.ultimatePrice}
+                  </span>
+                  <span className="text-xs text-slate-500 font-semibold">/ package</span>
+                </div>
+                <div className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 text-xs font-bold mb-6 inline-block">
+                  {t.pricing.ultimateLimit}
+                </div>
+
+                <ul className="space-y-3 text-xs sm:text-sm text-slate-700 mb-8">
+                  {t.pricing.ultimateFeatures.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Link
+                to="/dashboard-pricing"
+                className="w-full py-3.5 rounded-xl bg-slate-900 text-white font-bold text-sm text-center hover:bg-slate-800 transition-colors shadow-2xs"
+              >
+                {t.pricing.ultimateCta}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 border-t border-slate-200">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-extrabold text-slate-900">What Job Seekers Say</h2>
+            <p className="text-slate-500 text-sm mt-2">Real feedback from job seekers across the globe</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {TESTIMONIALS.map((t, idx) => (
+              <div key={idx} className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+                <div className="flex gap-1 text-amber-400 mb-3">
+                  {Array(t.stars)
+                    .fill(0)
+                    .map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-amber-400" />
+                    ))}
+                </div>
+                <p className="text-xs sm:text-sm text-slate-700 italic leading-relaxed mb-6 flex-1">
+                  "{t.text}"
+                </p>
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                  <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${t.color} text-white font-bold text-xs flex items-center justify-center shadow-xs`}>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-900">{t.name}</p>
+                    <p className="text-[11px] text-slate-400">{t.role} · {t.city}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -306,29 +379,38 @@ export default function Landing() {
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" className="py-20 px-4 sm:px-6 bg-slate-50">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-200">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900">Frequently asked questions</h2>
-            <p className="mt-3 text-slate-500">Everything you need to know about Vitelo</p>
-          </div>
+          <h2 className="text-3xl font-extrabold text-slate-900 text-center mb-10">
+            Frequently Asked Questions
+          </h2>
+
           <div className="space-y-3">
-            {FAQ_ITEMS.map(item => (
-              <FAQItem key={item.q} q={item.q} a={item.a} />
+            {FAQ_ITEMS.map((item, idx) => (
+              <div
+                key={idx}
+                className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50/50"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleFaq(idx)}
+                  className="w-full p-5 text-left font-bold text-sm text-slate-900 flex items-center justify-between gap-4 hover:bg-slate-100/50 transition-colors"
+                >
+                  <span>{item.q}</span>
+                  {openFaq === idx ? (
+                    <ChevronUp className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  )}
+                </button>
+                {openFaq === idx && (
+                  <div className="p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-white">
+                    {item.a}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── CTA Banner ── */}
-      <section className="py-20 px-4 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">Ready to land your dream job?</h2>
-          <p className="text-blue-100 text-lg mb-8">Join 10,000+ job seekers who built their CV with Vitelo.</p>
-          <Link to="/generate" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white text-blue-600 font-bold text-base shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-200">
-            Create My CV — Free
-            <ArrowRight className="w-4 h-4" />
-          </Link>
         </div>
       </section>
 

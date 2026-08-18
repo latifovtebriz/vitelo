@@ -5,8 +5,8 @@ import { api } from '../lib/api';
 import DashboardLayout from '../components/DashboardLayout';
 import {
   CreditCard, AlertTriangle, User, Lock,
-  Check, Loader2, Bell, ChevronRight, Sparkles,
-  Coins, Eye, EyeOff, LogOut, Trash2, ExternalLink, Terminal,
+  Check, Loader2, Bell, ChevronRight,
+  Coins, Eye, EyeOff, LogOut, Trash2, Terminal,
 } from 'lucide-react';
 
 
@@ -31,9 +31,11 @@ export default function Account() {
   const [pwdSaved, setPwdSaved] = useState(false);
   const [pwdLoading, setPwdLoading] = useState(false);
 
-  /* ── Credits ── */
+  /* ── Credits & Transactions ── */
   const [credits, setCredits] = useState(user?.credits ?? 0);
   const [creditsLoading, setCreditsLoading] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [txnsLoading, setTxnsLoading] = useState(false);
 
   /* ── Notifications ── */
   const [notifs, setNotifs] = useState({
@@ -47,13 +49,21 @@ export default function Account() {
   /* ── Delete account ── */
   const [showDelete, setShowDelete] = useState(false);
 
-  /* ── Load credits ── */
+  /* ── Load credits & transactions ── */
   useEffect(() => {
     setCreditsLoading(true);
     api.get('/billing/credits')
       .then(r => { setCredits(r.data.credits); updateCredits(r.data.credits); })
       .catch(() => {})
       .finally(() => setCreditsLoading(false));
+
+    setTxnsLoading(true);
+    api.get('/billing/history')
+      .then(r => {
+        if (Array.isArray(r.data)) setTransactions(r.data);
+      })
+      .catch(() => {})
+      .finally(() => setTxnsLoading(false));
   }, [updateCredits]);
 
   /* ── Save profile ── */
@@ -289,12 +299,12 @@ export default function Account() {
 
                 {/* Plans */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                  <h2 className="font-bold text-slate-800 mb-4">Top Up Credits</h2>
+                  <h2 className="font-bold text-slate-800 mb-4">Choose Career Package</h2>
                   <div className="grid sm:grid-cols-3 gap-4">
                     {[
-                      { name: 'Basic', credits: 5, price: '$4.99', color: 'border-slate-200', btnColor: 'bg-slate-800 hover:bg-slate-900' },
-                      { name: 'Pro', credits: 15, price: '$7.99', color: 'border-blue-300 ring-2 ring-blue-100', btnColor: 'bg-blue-600 hover:bg-blue-700', badge: 'Most Popular' },
-                      { name: 'Ultimate', credits: 40, price: '$12.99', color: 'border-purple-200', btnColor: 'bg-purple-600 hover:bg-purple-700' },
+                      { name: 'Basic', credits: '3 CVs + 3 CLs', price: '$4.99', color: 'border-slate-200', btnColor: 'bg-slate-800 hover:bg-slate-900' },
+                      { name: 'Pro', credits: '5 CVs + 5 CLs', price: '$7.99', color: 'border-blue-300 ring-2 ring-blue-100', btnColor: 'bg-blue-600 hover:bg-blue-700', badge: 'Most Popular' },
+                      { name: 'Ultimate', credits: '8 CVs + 8 CLs', price: '$12.99', color: 'border-purple-200', btnColor: 'bg-purple-600 hover:bg-purple-700' },
                     ].map(plan => (
                       <div key={plan.name} className={`rounded-xl border p-4 ${plan.color} relative`}>
                         {plan.badge && (
@@ -304,29 +314,65 @@ export default function Account() {
                         )}
                         <p className="font-bold text-slate-800 mt-1">{plan.name}</p>
                         <p className="text-2xl font-extrabold text-slate-900 mt-1">{plan.price}</p>
-                        <p className="text-xs text-slate-500 mb-4">{plan.credits} credits</p>
+                        <p className="text-xs text-slate-500 mb-4">{plan.credits}</p>
                         <Link to="/dashboard-pricing"
                           className={`w-full block text-center py-2 rounded-lg text-white text-xs font-bold transition-colors ${plan.btnColor}`}>
-                          Buy Now
+                          Buy Package
                         </Link>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Upgrade to subscription */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 p-5 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-amber-900">Want unlimited access?</p>
-                    <p className="text-xs text-amber-700 mt-0.5">Upgrade to a subscription plan for unlimited CVs, cover letters, and premium templates.</p>
-                  </div>
-                  <Link to="/dashboard-pricing"
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition-colors whitespace-nowrap">
-                    View Plans <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
+                {/* Transaction History Table */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                  <h2 className="font-bold text-slate-800 mb-4">Billing & Payment History</h2>
+                  {txnsLoading ? (
+                    <div className="flex items-center justify-center py-8 text-slate-400 gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin" /> Loading transactions...
+                    </div>
+                  ) : transactions.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-xs">
+                      No transactions recorded yet. Completed LemonSqueezy orders will appear here.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="border-b border-slate-100 text-slate-400 uppercase font-extrabold text-[10px]">
+                          <tr>
+                            <th className="pb-3">Date</th>
+                            <th className="pb-3">Package / Tier</th>
+                            <th className="pb-3">Amount</th>
+                            <th className="pb-3">Credits Granted</th>
+                            <th className="pb-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 text-slate-700">
+                          {transactions.map((tx: any) => (
+                            <tr key={tx.id}>
+                              <td className="py-3 font-medium">
+                                {new Date(tx.created_at).toLocaleDateString()}
+                              </td>
+                              <td className="py-3 font-bold uppercase text-slate-900">
+                                {tx.tier}
+                              </td>
+                              <td className="py-3 font-semibold text-slate-900">
+                                ${tx.amount_usd}
+                              </td>
+                              <td className="py-3 text-blue-600 font-bold">
+                                +{tx.credits_granted} credits
+                              </td>
+                              <td className="py-3">
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
+                                  {tx.status || 'Paid'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </>
             )}
