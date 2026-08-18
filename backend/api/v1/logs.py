@@ -2,7 +2,7 @@
 
 import uuid
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 
@@ -101,6 +101,10 @@ async def ingest_logs(
         else:
             logger.info(f"[{item.level}] {item.category}: {item.message} | Page: {item.page_url}")
 
+    # Auto-retention: Automatically prune logs older than 5 days
+    cutoff_5_days = datetime.now(timezone.utc) - timedelta(days=5)
+    await db.execute(delete(AppLog).where(AppLog.created_at < cutoff_5_days))
+
     await db.commit()
     return {"success": True, "ingested_count": len(db_records)}
 
@@ -142,6 +146,18 @@ async def list_logs(
     items = logs_res.scalars().all()
 
     return LogListResponse(items=list(items), total=total)
+
+
+@router.post("/cleanup")
+async def cleanup_old_logs(
+    days: int = Query(5, ge=1),
+    db: AsyncSession = Depends(get_db),
+):
+    """Purge logs older than specified number of days (default 5 days)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    result = await db.execute(delete(AppLog).where(AppLog.created_at < cutoff))
+    await db.commit()
+    return {"success": True, "purged_before": cutoff.isoformat(), "rows_affected": result.rowcount}
 
 
 @router.delete("/clear")
