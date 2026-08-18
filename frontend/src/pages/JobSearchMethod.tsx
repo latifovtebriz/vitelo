@@ -133,7 +133,11 @@ export default function JobSearchMethod() {
   const toggleTask = (taskId: string) => {
     setCompletedTasks(prev => {
       const next = new Set(prev);
-      next.has(taskId) ? next.delete(taskId) : next.add(taskId);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
       return next;
     });
   };

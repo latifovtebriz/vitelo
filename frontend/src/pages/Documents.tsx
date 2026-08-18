@@ -223,7 +223,6 @@ export default function Documents() {
               {cvs.map(cv => {
                 const ats = cv.ats_score ? atsBadge(cv.ats_score) : null;
                 const isRenaming = renamingId === cv.id;
-                const _isDeleting = deletingId === cv.id;
 
                 return (
                   <div key={cv.id}
