@@ -64,10 +64,10 @@ class User(Base):
 
     # Relationships
     roles: Mapped[List[Role]] = relationship(
-        "Role", secondary="user_roles", back_populates="users", lazy="selectin"
+        "Role", secondary="user_roles", back_populates="users"
     )
     profile: Mapped[Optional["UserProfile"]] = relationship(
-        "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan", lazy="selectin"
+        "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
     sessions: Mapped[List["UserSession"]] = relationship(
         "UserSession", back_populates="user", cascade="all, delete-orphan"
@@ -80,11 +80,11 @@ class User(Base):
     )
 
     # Vitelo core entities
-    cv_generations = relationship("CVGeneration", back_populates="user", lazy="selectin")
-    cover_letters = relationship("CoverLetter", back_populates="user", lazy="selectin")
-    job_matches = relationship("JobMatch", back_populates="user", lazy="selectin")
-    transactions = relationship("Transaction", back_populates="user", lazy="selectin")
-    interview_preps = relationship("InterviewPrep", back_populates="user", lazy="selectin")
+    cv_generations = relationship("CVGeneration", back_populates="user")
+    cover_letters = relationship("CoverLetter", back_populates="user")
+    job_matches = relationship("JobMatch", back_populates="user")
+    transactions = relationship("Transaction", back_populates="user")
+    interview_preps = relationship("InterviewPrep", back_populates="user")
 
     # Tracker, Learning & Billing relationships
     job_tracker = relationship("JobTracker", back_populates="user", uselist=False, cascade="all, delete-orphan")

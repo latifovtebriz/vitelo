@@ -148,14 +148,14 @@ async def forgot_password(
 ):
     """Initiate password reset flow by sending a reset link."""
     from models.log import AppLog
-    import uuid
 
     email_clean = body.email.strip().lower()
-    result = await db.execute(select(User).where(User.email == email_clean))
-    user = result.scalar_one_or_none()
+    result = await db.execute(select(User.id, User.email).where(User.email == email_clean))
+    user_row = result.first()
 
-    if user:
-        reset_token = create_password_reset_token(str(user.id), user.email)
+    if user_row:
+        user_id, user_email = user_row
+        reset_token = create_password_reset_token(str(user_id), user_email)
         reset_url = f"https://vitelo.me/reset-password?token={reset_token}"
 
         # Telemetry & Audit log
@@ -163,12 +163,12 @@ async def forgot_password(
             log_entry = AppLog(
                 level="INFO",
                 category="auth",
-                user_id=user.id,
-                user_email=user.email,
+                user_id=user_id,
+                user_email=user_email,
                 page_url="/forgot-password",
                 component="AuthForgotPassword",
-                message=f"Password reset token issued for {user.email}",
-                payload={"email": user.email, "reset_url": reset_url},
+                message=f"Password reset token issued for {user_email}",
+                payload={"email": user_email, "reset_url": reset_url},
             )
             db.add(log_entry)
             await db.commit()
