@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 
+import ATSChecker from './pages/ATSChecker';
+
 // Public pages
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -22,6 +24,8 @@ import JobSearchMethod from './pages/JobSearchMethod';
 import DashboardPricing from './pages/DashboardPricing';
 import Account from './pages/Account';
 import GenerateCV from './pages/GenerateCV';
+import GenerateCoverLetter from './pages/GenerateCoverLetter';
+import LearningHub from './pages/LearningHub';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -44,7 +48,7 @@ export default function App() {
 
         {/* Public stubs */}
         <Route path="/pricing" element={<Landing />} />
-        <Route path="/checker" element={<Landing />} />
+        <Route path="/checker" element={<ATSChecker />} />
         <Route path="/privacy" element={<Landing />} />
         <Route path="/terms" element={<Landing />} />
 
@@ -59,6 +63,8 @@ export default function App() {
         <Route path="/dashboard-pricing" element={<ProtectedRoute><DashboardPricing /></ProtectedRoute>} />
         <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
         <Route path="/generate" element={<ProtectedRoute><GenerateCV /></ProtectedRoute>} />
+        <Route path="/cover-letter/create" element={<ProtectedRoute><GenerateCoverLetter /></ProtectedRoute>} />
+        <Route path="/learning" element={<ProtectedRoute><LearningHub /></ProtectedRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" />} />

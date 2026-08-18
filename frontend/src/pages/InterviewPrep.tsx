@@ -5,7 +5,7 @@ import {
   Brain, Sparkles, ChevronRight,
   Check, AlertTriangle, Loader2, MessageSquare, Clock,
   Plus, ArrowRight, Eye, EyeOff, Trophy, Target, Lightbulb,
-  RotateCcw,
+  RotateCcw, Mic, MicOff, Timer,
 } from 'lucide-react';
 
 /* ── Types ── */
@@ -59,12 +59,78 @@ export default function InterviewPrep() {
   const [submitting, setSubmitting] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [userAnswer, setUserAnswer] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerActive, setTimerActive] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   // Form
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
   const [seniority, setSeniority] = useState('Mid-Level');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Practice Timer
+  useEffect(() => {
+    let interval: any = null;
+    if (timerActive) {
+      interval = setInterval(() => {
+        setTimerSeconds(s => s + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [timerActive]);
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+      setTimerActive(false);
+    } else {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('Voice speech recognition is supported in Google Chrome, Edge, and modern browsers.');
+        return;
+      }
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: any) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (transcript) setUserAnswer(transcript);
+        };
+
+        recognition.onerror = () => {
+          setIsRecording(false);
+          setTimerActive(false);
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+          setTimerActive(false);
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+        setIsRecording(true);
+        setTimerSeconds(0);
+        setTimerActive(true);
+      } catch {
+        setIsRecording(false);
+        setTimerActive(false);
+      }
+    }
+  };
 
   /* ── Load sessions ── */
   useEffect(() => {
@@ -338,8 +404,31 @@ export default function InterviewPrep() {
             {/* Answer input */}
             {!hasFeedback && (
               <>
+                {/* Voice & Timer Toolbar */}
+                <div className="flex items-center justify-between gap-3 mb-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                  <button
+                    type="button"
+                    onClick={toggleRecording}
+                    className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      isRecording
+                        ? 'bg-rose-500 text-white animate-pulse shadow-sm'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-indigo-600" />}
+                    {isRecording ? 'Listening... (Click to Stop)' : 'Record Voice Answer'}
+                  </button>
+
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                    <Timer className="w-3.5 h-3.5 text-slate-400" />
+                    <span>
+                      {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                </div>
+
                 <textarea ref={textareaRef} value={userAnswer} onChange={e => setUserAnswer(e.target.value)}
-                  placeholder="Type your answer here... Be specific, use the STAR method for behavioral questions, and include metrics where possible."
+                  placeholder="Type or dictate your answer... Follow the STAR method (Situation, Task, Action, Result) with metrics where possible."
                   rows={5}
                   className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none resize-y min-h-[120px]" />
                 <button onClick={handleSubmit} disabled={submitting || !userAnswer.trim()}

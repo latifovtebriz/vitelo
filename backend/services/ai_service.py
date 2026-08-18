@@ -319,12 +319,96 @@ class AIService:
         raw = await self._call_ai(INTERVIEW_PREP_SYSTEM_PROMPT, user_content)
         return self._parse_json(raw)
 
-    async def analyze_job_match(self, cv_data: dict, job_desc: str) -> dict:
-        """Analyze CV vs job description. Returns match dict."""
-        user_content = f"CV DATA:\n{json.dumps(cv_data, indent=2)}\n\nJOB DESCRIPTION:\n{job_desc}"
-        raw = await self._call_ai(JOB_MATCH_SYSTEM_PROMPT, user_content)
-        return self._parse_json(raw)
+
+ATS_DIAGNOSTICS_SYSTEM_PROMPT = """You are an enterprise-grade ATS (Applicant Tracking System) Scanner and Senior Technical Recruiter.
+Your job is to thoroughly audit the provided CV against standard ATS screening algorithms and the optional target Job Description.
+
+Analyze these 5 core dimensions:
+1. Keywords & Hard Skills Match (Exact match vs semantic match)
+2. Impact & Quantification (Google XYZ formula, metrics, percentages, revenue, latency)
+3. Action Verbs & Power Words (Leadership, engineering, execution verbs vs passive voice)
+4. Brevity & Structure (Readability, section headers, contact completeness)
+5. Soft Skills & Role Alignment
+
+Output ONLY valid JSON matching this schema:
+{
+  "ats_score": int (0-100),
+  "grade": str ("A+", "A", "B", "C", "D"),
+  "summary": str,
+  "scores": {
+    "keywords": int (0-100),
+    "impact": int (0-100),
+    "brevity": int (0-100),
+    "formatting": int (0-100),
+    "sections": int (0-100)
+  },
+  "matched_keywords": [
+    { "skill": str, "category": str, "importance": "high"|"medium" }
+  ],
+  "missing_keywords": [
+    { "skill": str, "category": str, "importance": "high"|"medium", "reason": str }
+  ],
+  "action_verbs": {
+    "score": int (0-100),
+    "strong_verbs_used": [str],
+    "weak_verbs_to_replace": [str]
+  },
+  "metrics_quantification": {
+    "score": int (0-100),
+    "bullets_with_metrics": int,
+    "total_bullets": int
+  },
+  "actionable_fixes": [
+    {
+      "id": str,
+      "category": str,
+      "title": str,
+      "impact": str ("+5 pts"|"+10 pts"|"+15 pts"),
+      "description": str,
+      "fix_suggestion": str
+    }
+  ]
+}"""
+
+INTERVIEW_EVALUATION_SYSTEM_PROMPT = """You are an elite Tech Interviewer and Executive Career Coach.
+Evaluate the candidate's answer to the given interview question based on the STAR method (Situation, Task, Action, Result) and role relevance.
+
+Output ONLY valid JSON matching this schema:
+{
+  "score": int (0-100),
+  "grade": str ("Exceptional"|"Strong"|"Average"|"Needs Improvement"),
+  "star_check": {
+    "situation": bool,
+    "task": bool,
+    "action": bool,
+    "result": bool
+  },
+  "strengths": [str],
+  "weaknesses": [str],
+  "clarity_and_tone": str,
+  "better_answer_example": str
+}"""
 
 
 # Singleton
 ai_service = AIService()
+
+
+# Extend AIService with new methods
+async def diagnose_ats_deep(self, cv_data: dict, job_desc: str = "") -> dict:
+    """Run comprehensive ATS audit on CV and return deep diagnostic report."""
+    user_content = f"CV DATA:\n{json.dumps(cv_data, ensure_ascii=False, indent=2)}\n\nTARGET JOB DESCRIPTION (Optional):\n{job_desc or 'General Tech Industry Best Practices'}"
+    raw = await self._call_ai(ATS_DIAGNOSTICS_SYSTEM_PROMPT, user_content)
+    return self._parse_json(raw)
+
+
+async def evaluate_interview_answer(self, question: str, user_answer: str, job_title: str = "") -> dict:
+    """Evaluate interview answer using STAR methodology."""
+    user_content = f"Target Role: {job_title or 'Software Engineer'}\nQuestion: {question}\nCandidate Answer: {user_answer}"
+    raw = await self._call_ai(INTERVIEW_EVALUATION_SYSTEM_PROMPT, user_content)
+    return self._parse_json(raw)
+
+
+AIService.diagnose_ats_deep = diagnose_ats_deep
+AIService.evaluate_interview_answer = evaluate_interview_answer
+

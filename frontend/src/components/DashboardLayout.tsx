@@ -21,7 +21,7 @@ const NAV_ITEMS = [
   { key: 'job-tracker', label: 'Job Tracker', icon: ClipboardList, href: '/job-tracker' },
   { key: 'interview', label: 'Interview Prep', icon: Brain, href: '/interview-prep' },
   { key: 'salary', label: 'Salary Analyzer', icon: DollarSign, href: '/salary-analyzer' },
-  { key: 'learning', label: 'Unlimited Learning', icon: BookOpen, href: '/dashboard?tab=learning', badge: 'NEW' },
+  { key: 'learning', label: 'Unlimited Learning', icon: BookOpen, href: '/learning', badge: 'NEW' },
   { key: 'job-method', label: 'Job Search Method', icon: Search, href: '/job-search-method' },
   { key: 'pricing', label: 'Pricing', icon: CreditCard, href: '/dashboard-pricing' },
 ];

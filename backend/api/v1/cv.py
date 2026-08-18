@@ -571,3 +571,30 @@ async def rename_cv(
     await db.commit()
     await db.refresh(cv)
     return cv
+
+
+# ── Deep ATS Diagnostics Endpoint ───────────────────────────────────────────
+
+class ATSDiagnosticsRequest(_BaseModel):
+    cv_id: uuid.UUID | None = None
+    cv_data: dict | None = None
+    job_description: str | None = None
+
+
+@router.post("/ai/ats-diagnostics")
+async def get_ats_diagnostics(
+    body: ATSDiagnosticsRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Deep ATS Diagnostic Scan evaluating 5 core dimensions, missing keywords, and action items."""
+    cv_data = body.cv_data
+    if not cv_data and body.cv_id:
+        result = await db.execute(select(CVGeneration).where(CVGeneration.id == body.cv_id))
+        cv_record = result.scalar_one_or_none()
+        if cv_record:
+            cv_data = cv_record.ai_output
+    if not cv_data:
+        cv_data = {}
+    report = await ai_service.diagnose_ats_deep(cv_data=cv_data, job_desc=body.job_description or "")
+    return report
+
