@@ -5,14 +5,13 @@ import {
   Search,
   Sparkles,
   FileCheck,
-  Star,
-  Layers,
   ChevronRight,
   Zap,
 } from 'lucide-react';
 import Navbar from '../components/ui/Navbar';
 import Footer from '../components/ui/Footer';
-import { EXAMPLE_PROFILES, ExampleCVProfile } from '../data/exampleProfiles';
+import { EXAMPLE_PROFILES } from '../data/exampleProfiles';
+import type { ExampleCVProfile } from '../data/exampleProfiles';
 
 const CATEGORIES = ['All', 'Tech', 'Business', 'Finance', 'Creative'];
 

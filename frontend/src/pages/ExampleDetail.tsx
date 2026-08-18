@@ -3,8 +3,6 @@ import { Link, useParams } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
-  Star,
-  Download,
   Copy,
   Check,
   Zap,
@@ -14,7 +12,6 @@ import {
   FileCheck,
   Linkedin,
   Github,
-  Globe,
   Mail,
   Phone,
   MapPin,

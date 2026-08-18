@@ -7,8 +7,6 @@ import {
   Zap,
   Sparkles,
   ChevronRight,
-  Building2,
-  Briefcase,
   FileCheck,
 } from 'lucide-react';
 import Navbar from '../components/ui/Navbar';

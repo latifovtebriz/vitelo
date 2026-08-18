@@ -18,10 +18,8 @@ import {
   Linkedin,
   Github,
   Globe,
-  CheckCircle2,
   FileCheck,
   X,
-  ExternalLink,
   Loader2,
   AlertCircle,
   Copy,
@@ -414,16 +412,21 @@ export default function PublicWebCV() {
                   </div>
                 )}
 
-                {languages.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-2">
-                      Languages
+                {/* Volunteering */}
+                {volunteering && volunteering.length > 0 && (
+                  <div className="pt-4 border-t border-slate-100">
+                    <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-3">
+                      Volunteering & Leadership
                     </h3>
-                    <div className="space-y-1.5 text-xs text-slate-700">
-                      {languages.map((l: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <span className="font-semibold text-slate-800">{l.name}</span>
-                          <span className="text-slate-500">{l.proficiency}</span>
+                    <div className="space-y-3 text-xs text-slate-700">
+                      {volunteering.map((v: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-bold text-slate-900">{v.role || v.organization}</span>
+                            <span className="text-[10px] text-slate-400 font-semibold">{v.period}</span>
+                          </div>
+                          {v.role && <p className="text-blue-600 font-semibold mb-1">{v.organization}</p>}
+                          {v.description && <p className="text-slate-600 leading-relaxed">{v.description}</p>}
                         </div>
                       ))}
                     </div>

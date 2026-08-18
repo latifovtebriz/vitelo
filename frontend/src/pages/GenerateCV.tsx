@@ -164,7 +164,17 @@ export default function GenerateCV() {
     if (exampleParam && EXAMPLE_PROFILES[exampleParam]) {
       const ex = EXAMPLE_PROFILES[exampleParam];
       setFormData({
-        personal: { ...ex.personal, headline: ex.personal.headline || '' },
+        personal: {
+          name: ex.personal.name || '',
+          headline: ex.personal.headline || '',
+          email: ex.personal.email || '',
+          phone: ex.personal.phone || '',
+          location: ex.personal.location || '',
+          linkedin: ex.personal.linkedin || '',
+          github: ex.personal.github || '',
+          portfolio: ex.personal.portfolio || '',
+          summary: ex.personal.summary || '',
+        },
         experience: ex.experience.map((e) => ({ ...e, location: e.location || '' })),
         education: ex.education.map((ed) => ({
           ...ed,

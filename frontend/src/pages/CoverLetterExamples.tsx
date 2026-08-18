@@ -5,7 +5,6 @@ import {
   FileText,
   Sparkles,
   Zap,
-  CheckCircle2,
   ChevronRight,
   Search,
 } from 'lucide-react';
