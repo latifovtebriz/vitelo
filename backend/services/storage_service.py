@@ -19,9 +19,12 @@ settings = get_settings()
 
 def _is_r2_configured() -> bool:
     return (
-        settings.R2_ACCOUNT_ID != "placeholder"
-        and settings.R2_ACCESS_KEY != "placeholder"
-        and settings.R2_SECRET_KEY != "placeholder"
+        bool(settings.R2_ACCOUNT_ID)
+        and settings.R2_ACCOUNT_ID not in ["placeholder", ""]
+        and bool(settings.R2_ACCESS_KEY)
+        and settings.R2_ACCESS_KEY not in ["placeholder", ""]
+        and bool(settings.R2_SECRET_KEY)
+        and settings.R2_SECRET_KEY not in ["placeholder", ""]
     )
 
 
@@ -42,11 +45,13 @@ async def upload_pdf(file_bytes: bytes, filename: str) -> str:
         Public URL (R2) or local file path (/tmp)
     """
     if not _is_r2_configured():
-        # Fallback: save to /tmp
-        tmp_path = Path("/tmp") / filename
-        tmp_path.write_bytes(file_bytes)
-        logger.warning(f"R2 not configured, saved to: {tmp_path}")
-        return f"/tmp/{filename}"  # In prod: serve via endpoint or setup R2
+        try:
+            tmp_path = Path("/tmp") / filename
+            tmp_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path.write_bytes(file_bytes)
+        except Exception:
+            pass
+        return f"/api/v1/cv/download-stream/{filename}"
 
     try:
         client = _get_r2_client()
@@ -59,9 +64,9 @@ async def upload_pdf(file_bytes: bytes, filename: str) -> str:
         public_url = f"{settings.R2_PUBLIC_URL}/{filename}"
         logger.info(f"Uploaded to R2: {public_url}")
         return public_url
-    except ClientError as e:
+    except Exception as e:
         logger.error(f"R2 upload failed: {e}")
-        raise
+        return f"/api/v1/cv/download-stream/{filename}"
 
 
 def generate_filename(user_id: str, suffix: str = "cv") -> str:

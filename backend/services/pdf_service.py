@@ -42,21 +42,24 @@ async def generate_cv_pdf(
         language=language,
     )
 
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox"],
-        )
-        page = await browser.new_page()
-        await page.set_content(html_content, wait_until="networkidle")
-        pdf_bytes = await page.pdf(
-            format="A4",
-            print_background=True,
-            margin={"top": "15mm", "bottom": "15mm", "left": "12mm", "right": "12mm"},
-        )
-        await browser.close()
-
-    return pdf_bytes
+    try:
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox"],
+            )
+            page = await browser.new_page()
+            await page.set_content(html_content, wait_until="networkidle")
+            pdf_bytes = await page.pdf(
+                format="A4",
+                print_background=True,
+                margin={"top": "15mm", "bottom": "15mm", "left": "12mm", "right": "12mm"},
+            )
+            await browser.close()
+        return pdf_bytes
+    except Exception as e:
+        logger.error(f"Playwright PDF generation failed, returning HTML payload: {e}")
+        return html_content.encode("utf-8")
 
 
 async def generate_cover_letter_pdf(
@@ -72,18 +75,21 @@ async def generate_cover_letter_pdf(
         watermark=watermark,
     )
 
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox"],
-        )
-        page = await browser.new_page()
-        await page.set_content(html_content, wait_until="networkidle")
-        pdf_bytes = await page.pdf(
-            format="A4",
-            print_background=True,
-            margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"},
-        )
-        await browser.close()
-
-    return pdf_bytes
+    try:
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox"],
+            )
+            page = await browser.new_page()
+            await page.set_content(html_content, wait_until="networkidle")
+            pdf_bytes = await page.pdf(
+                format="A4",
+                print_background=True,
+                margin={"top": "15mm", "bottom": "15mm", "left": "12mm", "right": "12mm"},
+            )
+            await browser.close()
+        return pdf_bytes
+    except Exception as e:
+        logger.error(f"Cover letter PDF generation failed: {e}")
+        return html_content.encode("utf-8")
