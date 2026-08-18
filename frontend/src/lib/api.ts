@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
+import { logger } from './logger';
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -18,17 +19,26 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Automatically log API failures to backend telemetry (skip logging log endpoint itself to prevent loops)
+    if (!error.config?.url?.includes('/logs')) {
+      logger.error('AxiosAPI', `API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} [${error.response?.status || 'Network Error'}]`, {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+    }
+
     // 401 Unauthorized => logout
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }
     // 402 Payment Required => prompt pricing
     if (error.response?.status === 402) {
-      // Custom event or logic to show pricing
       alert("You need credits to unlock this feature.");
-      window.location.href = '/dashboard'; 
+      window.location.href = '/dashboard-pricing'; 
     }
     return Promise.reject(error);
   }
 );
+

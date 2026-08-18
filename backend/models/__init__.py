@@ -89,8 +89,12 @@ from models.salary import SalaryMarketData, UserSalarySearch
 # Module 12: Onboarding & Strategy
 from models.strategy import JobSearchStrategy
 
+# Module 13: System & App Logs
+from models.log import AppLog
+
 __all__ = [
     "Base",
+    "AppLog",
     # User / Auth
     "User",
     "UserProfile",

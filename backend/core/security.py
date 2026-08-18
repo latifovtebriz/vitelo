@@ -101,3 +101,27 @@ async def get_current_user(
         raise InactiveAccountError()
 
     return user
+
+
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+
+async def get_current_user_optional(
+    token: str | None = Depends(oauth2_scheme_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """Optional user dependency — returns None if unauthenticated."""
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None
+        user_uuid = uuid.UUID(user_id_str)
+        from models.user import User
+        result = await db.execute(select(User).where(User.id == user_uuid))
+        return result.scalar_one_or_none()
+    except Exception:
+        return None
+

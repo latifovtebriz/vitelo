@@ -26,6 +26,7 @@ import Account from './pages/Account';
 import GenerateCV from './pages/GenerateCV';
 import GenerateCoverLetter from './pages/GenerateCoverLetter';
 import LearningHub from './pages/LearningHub';
+import SystemLogs from './pages/SystemLogs';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -65,6 +66,7 @@ export default function App() {
         <Route path="/generate" element={<ProtectedRoute><GenerateCV /></ProtectedRoute>} />
         <Route path="/cover-letter/create" element={<ProtectedRoute><GenerateCoverLetter /></ProtectedRoute>} />
         <Route path="/learning" element={<ProtectedRoute><LearningHub /></ProtectedRoute>} />
+        <Route path="/logs" element={<ProtectedRoute><SystemLogs /></ProtectedRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" />} />

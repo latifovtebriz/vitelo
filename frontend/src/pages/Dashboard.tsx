@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { redirectToCheckout } from '../lib/checkout';
 import { useAuthStore } from '../stores/authStore';
+import { logger } from '../lib/logger';
 import DashboardLayout from '../components/DashboardLayout';
 import {
   FileText, PlusCircle, Sparkles, ArrowRight, Star,
@@ -91,6 +92,7 @@ export default function Dashboard() {
 
   const handleTailor = async () => {
     if (!tailorDesc.trim() || cvs.length === 0) return;
+    logger.action('Dashboard', 'Triggered Resume Tailor with AI', { cv_id: cvs[0]?.id });
     setTailoring(true); setTailorResult(null);
     try {
       const res = await api.post(`/cv/tailor/${cvs[0].id}`, { job_description: tailorDesc });

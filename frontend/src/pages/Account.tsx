@@ -6,7 +6,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import {
   CreditCard, AlertTriangle, User, Lock,
   Check, Loader2, Bell, ChevronRight, Sparkles,
-  Coins, Eye, EyeOff, LogOut, Trash2, ExternalLink,
+  Coins, Eye, EyeOff, LogOut, Trash2, ExternalLink, Terminal,
 } from 'lucide-react';
 
 
@@ -129,7 +129,11 @@ export default function Account() {
                   {activeSection === s.key && <ChevronRight className="w-3.5 h-3.5 ml-auto text-blue-400" />}
                 </button>
               ))}
-              <div className="pt-4 border-t border-slate-100 mt-4">
+              <div className="pt-4 border-t border-slate-100 mt-4 space-y-1">
+                <Link to="/logs"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">
+                  <Terminal className="w-4 h-4 text-indigo-600" /> Live System Logs
+                </Link>
                 <button onClick={logout}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all">
                   <LogOut className="w-4 h-4" /> Log Out

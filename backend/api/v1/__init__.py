@@ -14,6 +14,7 @@ from api.v1.interview import router as interview_router
 from api.v1.salary import router as salary_router
 from api.v1.jobs import router as jobs_router
 from api.v1.learning import router as learning_router
+from api.v1.logs import router as logs_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -29,3 +30,4 @@ api_router.include_router(interview_router, prefix="/interview", tags=["Intervie
 api_router.include_router(salary_router, prefix="/salary", tags=["Salary Analyzer"])
 api_router.include_router(jobs_router, prefix="/jobs", tags=["Jobs"])
 api_router.include_router(learning_router, prefix="/learning", tags=["Learning"])
+api_router.include_router(logs_router, prefix="/logs", tags=["Logs"])
