@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { logger } from '../lib/logger';
 import DashboardLayout from '../components/DashboardLayout';
 import {
   Sparkles, FileText, Building2, Briefcase,
@@ -53,6 +54,12 @@ export default function GenerateCoverLetter() {
 
   const handleGenerate = async () => {
     if (!companyName.trim() || !jobTitle.trim()) return;
+
+    logger.action('GenerateCoverLetter', 'Triggered Cover Letter AI Generation', {
+      company: companyName,
+      title: jobTitle,
+      tone,
+    });
 
     setGenerating(true);
     setSavedSuccess(false);

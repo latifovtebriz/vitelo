@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { logger } from '../lib/logger';
 import DashboardLayout from '../components/DashboardLayout';
 import {
   Search, MapPin, Clock, Heart, Briefcase,
@@ -122,6 +123,7 @@ export default function Jobs() {
   };
 
   const handleAddToTracker = async (job: typeof ALL_JOBS[0], columnKey: string = 'Applied') => {
+    logger.action('Jobs', 'Added Job to Kanban Tracker', { title: job.title, company: job.company, column: columnKey });
     try {
       await api.post('/jobs/apply-to-tracker', {
         job_title: job.title,
