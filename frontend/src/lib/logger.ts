@@ -1,11 +1,11 @@
 /**
  * Comprehensive Application Telemetry & Event Logger
  * 
- * Captures:
- * 1. UI Button clicks & actions
+ * Directly streams:
+ * 1. UI Button clicks & user actions
  * 2. Unhandled JavaScript runtime errors
  * 3. API network & HTTP failure diagnostics
- * 4. Batched transmission to /api/v1/logs
+ * 4. Real-time direct ingestion into Supabase `app_logs` table
  */
 
 import axios from 'axios';
@@ -19,14 +19,17 @@ interface LogPayload {
   message: string;
   page_url?: string;
   component?: string;
+  user_email?: string | null;
   payload?: any;
 }
+
+const SUPABASE_URL = 'https://qxwxpykthyoyfnydsxvn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4d3hweWt0aHlveWZueWRzeHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNTI0NTAsImV4cCI6MjEwMjYyODQ1MH0.RqhXRDwJE37f9TykmJ77PRtH7PTc_8ZdQ7lbxc8rBiU';
 
 class TelemetryLogger {
   private queue: LogPayload[] = [];
   private flushTimer: any = null;
   private isFlushing = false;
-  private readonly apiUrl = import.meta.env.VITE_API_URL || 'https://api.vitelo.me';
 
   constructor() {
     this.setupGlobalErrorListeners();
@@ -53,17 +56,31 @@ class TelemetryLogger {
     });
   }
 
+  private getUserEmail(): string | null {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const auth = localStorage.getItem('auth_storage');
+        if (auth) {
+          const parsed = JSON.parse(auth);
+          return parsed.state?.user?.email || null;
+        }
+      }
+    } catch {}
+    return null;
+  }
+
   private enqueue(entry: LogPayload) {
     this.queue.push({
       ...entry,
+      user_email: entry.user_email || this.getUserEmail(),
       page_url: entry.page_url || (typeof window !== 'undefined' ? window.location.pathname + window.location.search : ''),
     });
 
-    // Flush immediately if ERROR or queue reaches 5 items
-    if (entry.level === 'ERROR' || this.queue.length >= 5) {
+    // Flush immediately on ERROR or when queue reaches 3 items
+    if (entry.level === 'ERROR' || this.queue.length >= 3) {
       this.flush();
     } else if (!this.flushTimer) {
-      this.flushTimer = setTimeout(() => this.flush(), 3000);
+      this.flushTimer = setTimeout(() => this.flush(), 2000);
     }
   }
 
@@ -80,17 +97,33 @@ class TelemetryLogger {
     this.isFlushing = true;
 
     try {
-      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
+      // Direct high-speed ingestion into Supabase PostgreSQL `app_logs`
       await axios.post(
-        `${this.apiUrl}/api/v1/logs/`,
-        { logs: batch },
+        `${SUPABASE_URL}/rest/v1/app_logs`,
+        batch,
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          timeout: 5000,
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          timeout: 4000,
         }
       );
     } catch {
-      // In case backend is offline, preserve console logging without infinite error loops
+      // Fallback to local /api/v1/logs if network restricted
+      try {
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
+        await axios.post(
+          '/api/v1/logs/',
+          { logs: batch },
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            timeout: 3000,
+          }
+        );
+      } catch {}
     } finally {
       this.isFlushing = false;
     }

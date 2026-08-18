@@ -20,6 +20,9 @@ interface LogItem {
   created_at: string;
 }
 
+const SUPABASE_URL = 'https://qxwxpykthyoyfnydsxvn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4d3hweWt0aHlveWZueWRzeHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNTI0NTAsImV4cCI6MjEwMjYyODQ1MH0.RqhXRDwJE37f9TykmJ77PRtH7PTc_8ZdQ7lbxc8rBiU';
+
 export default function SystemLogs() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -29,39 +32,36 @@ export default function SystemLogs() {
 
   const fetchLogs = async () => {
     try {
-      const params: any = { limit: 100 };
-      if (selectedLevel !== 'ALL') params.level = selectedLevel;
-      if (searchQuery.trim()) params.search = searchQuery.trim();
+      let url = `${SUPABASE_URL}/rest/v1/app_logs?select=*&order=created_at.desc&limit=100`;
+      if (selectedLevel !== 'ALL') {
+        url += `&level=eq.${selectedLevel}`;
+      }
+      if (searchQuery.trim()) {
+        url += `&or=(message.ilike.*${encodeURIComponent(searchQuery.trim())}*,component.ilike.*${encodeURIComponent(searchQuery.trim())}*)`;
+      }
 
-      const res = await api.get('/logs/', { params });
-      setLogs(res.data.items || []);
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data);
+        return;
+      }
+
+      // Fallback
+      const backendRes = await api.get('/logs/');
+      setLogs(backendRes.data.items || []);
     } catch {
-      // Mock logs for resilience
-      setLogs(prev => prev.length > 0 ? prev : [
-        {
-          id: 'mock_1',
-          level: 'ACTION',
-          source: 'frontend',
-          category: 'ui_button_click',
-          message: 'Clicked "Create My First Resume"',
-          page_url: '/documents',
-          component: 'Documents.tsx',
-          user_email: 'user@vitelo.me',
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 'mock_2',
-          level: 'ERROR',
-          source: 'frontend',
-          category: 'client_exception',
-          message: 'API Error: POST /api/v1/cv/generate [500 Internal Server Error]',
-          page_url: '/generate',
-          component: 'GenerateCV.tsx',
-          user_email: 'user@vitelo.me',
-          payload: { error: 'Database connection timeout during PDF generation' },
-          created_at: new Date(Date.now() - 60000).toISOString(),
-        },
-      ]);
+      // Fallback
+      try {
+        const backendRes = await api.get('/logs/');
+        setLogs(backendRes.data.items || []);
+      } catch {}
     }
   };
 
@@ -73,14 +73,20 @@ export default function SystemLogs() {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       fetchLogs();
-    }, 4000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [autoRefresh, selectedLevel, searchQuery]);
 
   const handleClear = async () => {
     if (!confirm('Are you sure you want to clear all system telemetry logs?')) return;
     try {
-      await api.delete('/logs/clear');
+      await fetch(`${SUPABASE_URL}/rest/v1/app_logs?id=neq.00000000-0000-0000-0000-000000000000`, {
+        method: 'DELETE',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
       setLogs([]);
     } catch {}
   };
