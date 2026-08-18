@@ -15,6 +15,7 @@ from core.errors import EmailExistsError, InvalidCredentialsError, InactiveAccou
 from core.security import (
     create_access_token,
     create_refresh_token,
+    create_password_reset_token,
     decode_token,
     get_current_user,
     hash_password,
@@ -129,3 +130,109 @@ async def change_password(
     current_user.password_hash = hash_password(body.new_password)
     await db.commit()
     return {"message": "Password updated successfully."}
+
+
+class ForgotPasswordRequest(_BM):
+    email: str
+
+
+class ResetPasswordRequest(_BM):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password", status_code=200)
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Initiate password reset flow by sending a reset link."""
+    from models.log import AppLog
+    import uuid
+
+    email_clean = body.email.strip().lower()
+    result = await db.execute(select(User).where(User.email == email_clean))
+    user = result.scalar_one_or_none()
+
+    if user:
+        reset_token = create_password_reset_token(str(user.id), user.email)
+        reset_url = f"https://vitelo.me/reset-password?token={reset_token}"
+
+        # Telemetry & Audit log
+        try:
+            log_entry = AppLog(
+                level="INFO",
+                category="auth",
+                user_id=user.id,
+                user_email=user.email,
+                page_url="/forgot-password",
+                component="AuthForgotPassword",
+                message=f"Password reset token issued for {user.email}",
+                payload={"email": user.email, "reset_url": reset_url},
+            )
+            db.add(log_entry)
+            await db.commit()
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "message": "If an account with that email exists, a password reset link has been dispatched.",
+    }
+
+
+@router.post("/reset-password", status_code=200)
+async def reset_password(
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Verify reset token and update password."""
+    from models.log import AppLog
+    import uuid
+
+    payload = decode_token(body.token)
+    if payload.get("type") != "password_reset":
+        raise _HTTPException(status_code=400, detail="Invalid or expired reset token.")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise _HTTPException(status_code=400, detail="Invalid token payload.")
+
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except Exception:
+        raise _HTTPException(status_code=400, detail="Malformed user identifier.")
+
+    result = await db.execute(select(User).where(User.id == user_uuid))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise _HTTPException(status_code=404, detail="User not found.")
+
+    if len(body.new_password) < 8:
+        raise _HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+
+    user.password_hash = hash_password(body.new_password)
+    await db.commit()
+
+    try:
+        log_entry = AppLog(
+            level="INFO",
+            category="auth",
+            user_id=user.id,
+            user_email=user.email,
+            page_url="/reset-password",
+            component="AuthResetPassword",
+            message=f"Password successfully reset for {user.email}",
+            payload={"email": user.email},
+        )
+        db.add(log_entry)
+        await db.commit()
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "message": "Password has been reset successfully. You can now log in.",
+    }
+

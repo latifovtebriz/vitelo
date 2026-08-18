@@ -7,6 +7,8 @@ import ATSChecker from './pages/ATSChecker';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Templates from './pages/Templates';
 import Examples from './pages/Examples';
 import ExampleDetail from './pages/ExampleDetail';
@@ -42,6 +44,8 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/templates" element={<Templates />} />
         <Route path="/examples" element={<Examples />} />
         <Route path="/examples/:slug" element={<ExampleDetail />} />
