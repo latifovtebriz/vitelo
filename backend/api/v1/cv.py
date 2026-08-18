@@ -598,3 +598,78 @@ async def get_ats_diagnostics(
     report = await ai_service.diagnose_ats_deep(cv_data=cv_data, job_desc=body.job_description or "")
     return report
 
+
+# ── Public Shareable Web CV Endpoint ─────────────────────────────────────────
+
+@router.get("/public/{cv_id}")
+async def get_public_cv(
+    cv_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch public CV details for shareable web CV view (no auth required)."""
+    result = await db.execute(select(CVGeneration).where(CVGeneration.id == cv_id))
+    cv = result.scalar_one_or_none()
+    if not cv:
+        raise NotFoundError("CV not found or link has expired")
+
+    return {
+        "id": str(cv.id),
+        "title": cv.title,
+        "template": cv.template or "modern",
+        "ats_score": cv.ats_score,
+        "created_at": cv.created_at.isoformat() if cv.created_at else None,
+        "clean_pdf_url": cv.clean_pdf_url,
+        "watermarked_pdf_url": cv.watermarked_pdf_url,
+        "cv_data": cv.ai_output or cv.input_data or {},
+    }
+
+
+# ── AI CV Translation & LinkedIn Optimization Endpoints ──────────────────────
+
+class CVTranslateRequest(_BaseModel):
+    cv_id: uuid.UUID | None = None
+    cv_data: dict | None = None
+    target_language: str = "en"  # "en", "az", "tr", "de", "ru"
+
+
+@router.post("/ai/translate")
+async def translate_cv_endpoint(
+    body: CVTranslateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Translate CV to target language using Gemini AI with technical preservation."""
+    cv_data = body.cv_data
+    if not cv_data and body.cv_id:
+        result = await db.execute(select(CVGeneration).where(CVGeneration.id == body.cv_id))
+        cv_record = result.scalar_one_or_none()
+        if cv_record:
+            cv_data = cv_record.ai_output or cv_record.input_data
+    if not cv_data:
+        cv_data = {}
+    translated = await ai_service.translate_cv(cv_data=cv_data, target_language=body.target_language)
+    return {"translated_cv": translated, "target_language": body.target_language}
+
+
+class LinkedInOptimizeRequest(_BaseModel):
+    cv_id: uuid.UUID | None = None
+    cv_data: dict | None = None
+
+
+@router.post("/ai/linkedin-optimize")
+async def optimize_linkedin_endpoint(
+    body: LinkedInOptimizeRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate high-conversion LinkedIn headline, About section, and experience bullets from CV."""
+    cv_data = body.cv_data
+    if not cv_data and body.cv_id:
+        result = await db.execute(select(CVGeneration).where(CVGeneration.id == body.cv_id))
+        cv_record = result.scalar_one_or_none()
+        if cv_record:
+            cv_data = cv_record.ai_output or cv_record.input_data
+    if not cv_data:
+        cv_data = {}
+    optimized = await ai_service.optimize_linkedin_profile(cv_data=cv_data)
+    return optimized
+
+

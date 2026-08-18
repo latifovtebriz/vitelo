@@ -409,6 +409,81 @@ async def evaluate_interview_answer(self, question: str, user_answer: str, job_t
     return self._parse_json(raw)
 
 
+CV_TRANSLATION_SYSTEM_PROMPT = """You are a multilingual Executive Resume Translator and Localization Expert.
+Translate the provided CV data into the requested target language ({target_language}).
+
+RULES:
+1. Output ONLY valid JSON matching the exact input CV schema.
+2. Translate all summaries, job responsibilities, bullet points, degrees, and project descriptions into professional, fluent, high-level vocabulary of the target language.
+3. NEVER translate proper technical terms, programming languages, cloud providers, frameworks, company names, or product names (e.g., keep .NET Core, Docker, PostgreSQL, React, AWS, Kubernetes exactly as-is).
+4. Maintain all metric numbers, percentages, and date formatting.
+"""
+
+LINKEDIN_OPTIMIZER_SYSTEM_PROMPT = """You are an elite LinkedIn Growth Strategist and Personal Branding Consultant.
+Transform the candidate's CV into high-visibility, recruiter-magnetic LinkedIn profile components.
+
+Output ONLY valid JSON matching this schema:
+{
+  "headlines": [
+    {
+      "id": "punchy",
+      "label": "Punchy & Direct",
+      "text": str
+    },
+    {
+      "id": "metric_driven",
+      "label": "Achievement & Impact Focused",
+      "text": str
+    },
+    {
+      "id": "thought_leader",
+      "label": "Domain Authority & Specialty",
+      "text": str
+    }
+  ],
+  "about_section": {
+    "hook": str,
+    "body": str,
+    "top_achievements": [str],
+    "core_technologies": [str],
+    "call_to_action": str
+  },
+  "experiences": [
+    {
+      "title": str,
+      "company": str,
+      "formatted_text": str
+    }
+  ],
+  "top_skill_endorsements": [str]
+}"""
+
+
+async def translate_cv(self, cv_data: dict, target_language: str = "en") -> dict:
+    """Translate CV data into target language while preserving technical terminology."""
+    lang_names = {
+        "en": "Professional English (UK/US)",
+        "az": "Professional Azerbaijani",
+        "tr": "Professional Turkish",
+        "de": "Professional German (Deutsch)",
+        "ru": "Professional Russian",
+    }
+    target_lang_str = lang_names.get(target_language.lower(), "Professional English")
+    prompt = CV_TRANSLATION_SYSTEM_PROMPT.replace("{target_language}", target_lang_str)
+    user_content = f"TARGET LANGUAGE: {target_lang_str}\n\nCV DATA:\n{json.dumps(cv_data, ensure_ascii=False, indent=2)}"
+    raw = await self._call_ai(prompt, user_content)
+    return self._parse_json(raw)
+
+
+async def optimize_linkedin_profile(self, cv_data: dict) -> dict:
+    """Generate high-conversion LinkedIn headline, About section, and experience bullets from CV."""
+    user_content = f"CANDIDATE CV DATA:\n{json.dumps(cv_data, ensure_ascii=False, indent=2)}"
+    raw = await self._call_ai(LINKEDIN_OPTIMIZER_SYSTEM_PROMPT, user_content)
+    return self._parse_json(raw)
+
+
 AIService.diagnose_ats_deep = diagnose_ats_deep
 AIService.evaluate_interview_answer = evaluate_interview_answer
+AIService.translate_cv = translate_cv
+AIService.optimize_linkedin_profile = optimize_linkedin_profile
 

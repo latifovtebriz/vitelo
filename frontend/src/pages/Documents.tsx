@@ -335,24 +335,29 @@ export default function Documents() {
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex gap-2 mt-auto">
+                      <div className="flex gap-1.5 mt-auto">
                         <Link to={`/generate?cv_id=${cv.id}`}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors">
+                          className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors">
                           <Pencil className="w-3.5 h-3.5" /> Edit
+                        </Link>
+                        <Link to={`/p/${cv.id}`} target="_blank"
+                          className="px-2.5 py-2 rounded-lg bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors flex items-center justify-center"
+                          title="Open Shareable Web CV">
+                          <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
                         {cv.clean_pdf_url ? (
                           <a href={cv.clean_pdf_url} target="_blank" rel="noreferrer"
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors">
-                            <FileDown className="w-3.5 h-3.5" /> Download
+                            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors">
+                            <FileDown className="w-3.5 h-3.5" /> PDF
                           </a>
                         ) : cv.watermarked_pdf_url ? (
                           <a href={cv.watermarked_pdf_url} target="_blank" rel="noreferrer"
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-slate-600 text-white text-xs font-bold hover:bg-slate-700 transition-colors">
-                            <ExternalLink className="w-3.5 h-3.5" /> Preview
+                            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-slate-600 text-white text-xs font-bold hover:bg-slate-700 transition-colors">
+                            <Eye className="w-3.5 h-3.5" /> Preview
                           </a>
                         ) : (
                           <Link to="/dashboard-pricing"
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold hover:shadow-md transition-all">
+                            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold hover:shadow-md transition-all">
                             <Sparkles className="w-3.5 h-3.5" /> Unlock
                           </Link>
                         )}

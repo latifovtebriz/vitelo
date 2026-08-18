@@ -23,12 +23,14 @@ import {
   Edit3,
   Wand2,
   Upload,
+  Linkedin,
 } from 'lucide-react';
 import {
   SKILL_CATEGORIES,
   SAMPLE_CV_DATA,
   JOB_TITLE_SUGGESTIONS,
 } from '../data/skillsData';
+import { EXAMPLE_PROFILES } from '../data/exampleProfiles';
 import SkillAutocomplete from '../components/cv/SkillAutocomplete';
 import LiveCVPreview from '../components/cv/LiveCVPreview';
 import type { CVTheme } from '../components/cv/LiveCVPreview';
@@ -147,7 +149,46 @@ export default function GenerateCV() {
       setGeneratedData({ cv_id: unlockId, watermarked_pdf_url: null });
       setStep(6);
     }
-  }, [unlockId]);
+
+    const templateParam = searchParams.get('template') as any;
+    const colorParam = searchParams.get('color');
+    if (templateParam || colorParam) {
+      setTheme((prev) => ({
+        ...prev,
+        template: templateParam || prev.template,
+        primaryColor: colorParam || prev.primaryColor,
+      }));
+    }
+
+    const exampleParam = searchParams.get('example');
+    if (exampleParam && EXAMPLE_PROFILES[exampleParam]) {
+      const ex = EXAMPLE_PROFILES[exampleParam];
+      setFormData({
+        personal: { ...ex.personal, headline: ex.personal.headline || '' },
+        experience: ex.experience.map((e) => ({ ...e, location: e.location || '' })),
+        education: ex.education.map((ed) => ({
+          ...ed,
+          location: ed.location || '',
+          start_date: ed.start_date || '',
+          end_date: ed.end_date || '',
+          gpa: ed.gpa || '',
+        })),
+        projects: ex.projects || [],
+        volunteering: [],
+        skills: {
+          languages_frameworks: ex.skills.technical.slice(0, 5),
+          devops_cloud: ex.skills.technical.slice(5, 10),
+          databases: ex.skills.technical.slice(10, 15),
+          concepts_tools: ex.skills.technical.slice(15),
+          soft_skills: ex.skills.soft,
+        },
+        languages: ex.languages.map((l) => ({ name: l.name, proficiency: l.proficiency })),
+        target_job: ex.title,
+        template: templateParam || 'modern',
+        language: 'en',
+      });
+    }
+  }, [unlockId, searchParams]);
 
   // Load Full Sample Data (Tabriz Latifov test CV)
   const handleLoadSample = () => {
@@ -202,6 +243,20 @@ export default function GenerateCV() {
     setAiModalOpen(true);
   };
 
+  // Open Translate CV Modal
+  const openTranslateModal = () => {
+    setAiContextData({ cv_data: formData });
+    setAiModalMode('translate_cv');
+    setAiModalOpen(true);
+  };
+
+  // Open LinkedIn Optimizer Modal
+  const openLinkedInModal = () => {
+    setAiContextData({ cv_data: formData });
+    setAiModalMode('linkedin_optimizer');
+    setAiModalOpen(true);
+  };
+
   // Handle AI Apply callback
   const handleAiApply = (result: any) => {
     if (aiModalMode === 'enhance_bullet' && activeExpIndex !== null) {
@@ -229,6 +284,17 @@ export default function GenerateCV() {
           soft_skills: result.skills?.soft_skills || prev.skills.soft_skills,
         },
         languages: result.languages?.length ? result.languages : prev.languages,
+      }));
+    } else if (aiModalMode === 'translate_cv' && result) {
+      setFormData((prev) => ({
+        ...prev,
+        personal: { ...prev.personal, ...(result.personal || {}), summary: result.summary || prev.personal.summary },
+        experience: result.experience?.length ? result.experience : prev.experience,
+        education: result.education?.length ? result.education : prev.education,
+        projects: result.projects?.length ? result.projects : prev.projects,
+        volunteering: result.volunteering?.length ? result.volunteering : prev.volunteering,
+        languages: result.languages?.length ? result.languages : prev.languages,
+        target_job: result.target_job || prev.target_job,
       }));
     }
   };
@@ -498,6 +564,26 @@ export default function GenerateCV() {
           >
             <Upload className="w-3.5 h-3.5 text-slate-400" />
             Import Existing CV
+          </button>
+
+          <button
+            type="button"
+            onClick={openTranslateModal}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-300 bg-indigo-950/60 border border-indigo-800/80 rounded-xl hover:bg-indigo-900/50 transition-all shadow-sm"
+            title="Translate entire CV into AZ, TR, EN, DE, or RU"
+          >
+            <Globe className="w-3.5 h-3.5 text-indigo-400" />
+            Translate (AZ/TR/EN)
+          </button>
+
+          <button
+            type="button"
+            onClick={openLinkedInModal}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-sky-300 bg-sky-950/60 border border-sky-800/80 rounded-xl hover:bg-sky-900/50 transition-all shadow-sm"
+            title="Generate LinkedIn headlines, About narrative, and skill endorsements"
+          >
+            <Linkedin className="w-3.5 h-3.5 text-sky-400" />
+            LinkedIn Pack
           </button>
 
           {/* Mobile view toggle */}
