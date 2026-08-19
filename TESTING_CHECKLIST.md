@@ -23,10 +23,10 @@
 
 ## 🔐 Modul 1: Autentifikasiya və İstifadəçi Profili
 
-- [ ] **Task 1: Yeni İstifadəçi Qeydiyyatı (`/register`)**
-  - **Addım**: Qeydiyyat formuna yeni ad, email və şifrə daxil edib "Create Account" düyməsini sıxın.
-  - **Gözlənilən Nəticə**: İstifadəçi uğurla qeydiyyatdan keçir, JWT token `localStorage`-a yazılır və birbaşa `/dashboard`-a yönləndirilir. Baza `users` cədvəlində yeni sətir yaranır.
-  - **Log Yoxlanışı**: `app_logs` cədvəlində `ui_button_click` və `auth_register` qeydi yaranmalıdır.
+- [ ] **Task 1: Yeni İstifadəçi Qeydiyyatı və 15-Dəqiqəlik Təsdiq Linki (`/register`, `/verify-email`)**
+  - **Addım**: Qeydiyyat formuna ad, email və şifrə daxil edib "Create Account" sıxın. Açılan "Check your email" pəncərəsindəki 15 dəqiqəlik təsdiq linkini (və ya test keçidini) klikləyin.
+  - **Gözlənilən Nəticə**: `/verify-email?token=...` səhifəsi açılır, token yoxlanılır, istifadəçi bazaya yazılır və avtomatik aktivləşərək `/dashboard`-a yönləndirilir. 15 dəqiqə bitdikdə link vaxtı keçmiş sayılır və yenisi tələb olunur.
+  - **Log Yoxlanışı**: `app_logs` cədvəlində `ui_button_click` (`Register`) və `auth_verify_email` qeydləri yaranmalıdır.
 
 - [ ] **Task 2: Mövcud Hesaba Giriş (`/login`)**
   - **Addım**: Qeydiyyatdan keçmiş email və şifrə ilə daxil olun.

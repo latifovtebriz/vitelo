@@ -70,6 +70,32 @@ def create_password_reset_token(user_id: str, email: str) -> str:
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
+def create_email_verification_token(email: str, password_hash: str, full_name: str | None = None) -> str:
+    """Create a 15-minute registration confirmation token."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode = {
+        "email": email,
+        "password_hash": password_hash,
+        "full_name": full_name,
+        "type": "email_verification",
+        "exp": expire,
+    }
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_email_verification_token(token: str) -> dict:
+    """Decode and validate a 15-minute email verification token."""
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        if payload.get("type") != "email_verification" or "email" not in payload:
+            raise InvalidTokenError("Invalid or expired email verification link.")
+        return payload
+    except JWTError:
+        raise InvalidTokenError("Verification link has expired or is invalid. Links remain valid for 15 minutes.")
+
+
 def decode_token(token: str) -> dict:
     """Decode and validate a JWT token. Raises InvalidTokenError on failure."""
     try:

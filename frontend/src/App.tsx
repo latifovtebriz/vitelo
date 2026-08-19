@@ -15,6 +15,7 @@ import ExampleDetail from './pages/ExampleDetail';
 import CoverLetterExamples from './pages/CoverLetterExamples';
 import CoverLetterDetail from './pages/CoverLetterDetail';
 import PublicWebCV from './pages/PublicWebCV';
+import VerifyEmail from './pages/VerifyEmail';
 
 // Dashboard pages (protected)
 import Dashboard from './pages/Dashboard';
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/cover-letter" element={<CoverLetterExamples />} />
         <Route path="/cover-letter/:slug" element={<CoverLetterDetail />} />
         <Route path="/p/:id" element={<PublicWebCV />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Public stubs */}
         <Route path="/pricing" element={<Landing />} />

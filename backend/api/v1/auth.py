@@ -10,12 +10,15 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import get_settings
 from core.database import get_db
 from core.errors import EmailExistsError, InvalidCredentialsError, InactiveAccountError, InvalidTokenError
 from core.security import (
     create_access_token,
     create_refresh_token,
     create_password_reset_token,
+    create_email_verification_token,
+    decode_email_verification_token,
     decode_token,
     get_current_user,
     hash_password,
@@ -26,6 +29,9 @@ from schemas.auth import (
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    RegisterPendingResponse,
+    VerifyEmailRequest,
+    ResendVerificationRequest,
     TokenResponse,
     UserResponse,
 )
@@ -41,29 +47,97 @@ def _issue_tokens(user_id: str) -> TokenResponse:
     )
 
 
-@router.post("/register", response_model=TokenResponse, status_code=201)
+@router.post("/register", response_model=RegisterPendingResponse, status_code=200)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """
-    Register a new user.
+    Step 1 of Registration:
     - 409 if email already exists
-    - Creates user with role=individual, credits=0
-    - Returns tokens immediately (no email verification for MVP)
+    - Generates 15-minute secure confirmation token
+    - Dispatches verification link to user's email
     """
+    settings = get_settings()
     # Check email uniqueness
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
         raise EmailExistsError()
 
-    # Create user
-    user = User(
+    pwd_hash = hash_password(body.password)
+    token = create_email_verification_token(
         email=body.email,
-        password_hash=hash_password(body.password),
+        password_hash=pwd_hash,
         full_name=body.full_name,
     )
-    db.add(user)
-    await db.flush()  # get generated UUID
+    verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+
+    return RegisterPendingResponse(
+        success=True,
+        email=body.email,
+        message="A confirmation link has been sent to your email. It remains active for 15 minutes.",
+        expires_in_minutes=15,
+        verification_link=verification_link,
+    )
+
+
+@router.post("/verify-email", response_model=TokenResponse, status_code=200)
+async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Step 2 of Registration (Email Confirmation):
+    - Validates 15-minute token
+    - Creates user in PostgreSQL database and activates account
+    - Issues access + refresh tokens
+    """
+    payload = decode_email_verification_token(body.token)
+    email = payload.get("email")
+    pwd_hash = payload.get("password_hash")
+    full_name = payload.get("full_name")
+
+    # Check if user was already created
+    existing = await db.execute(select(User).where(User.email == email))
+    user = existing.scalar_one_or_none()
+
+    if not user:
+        user = User(
+            email=email,
+            password_hash=pwd_hash,
+            full_name=full_name,
+            role="individual",
+            credits=1,
+            is_active=True,
+        )
+        db.add(user)
+        await db.flush()
+    else:
+        user.is_active = True
+        await db.flush()
 
     return _issue_tokens(str(user.id))
+
+
+@router.post("/resend-verification", response_model=RegisterPendingResponse)
+async def resend_verification(body: ResendVerificationRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Resends 15-minute confirmation email.
+    """
+    settings = get_settings()
+    existing = await db.execute(select(User).where(User.email == body.email))
+    if existing.scalar_one_or_none():
+        raise EmailExistsError("An active account with this email already exists. Please log in.")
+
+    pwd_hash = hash_password(body.password) if body.password else ""
+    token = create_email_verification_token(
+        email=body.email,
+        password_hash=pwd_hash,
+        full_name=body.full_name,
+    )
+    verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+
+    return RegisterPendingResponse(
+        success=True,
+        email=body.email,
+        message="A new confirmation link has been sent to your email. It remains active for 15 minutes.",
+        expires_in_minutes=15,
+        verification_link=verification_link,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)

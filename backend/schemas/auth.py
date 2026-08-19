@@ -28,7 +28,24 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+    password: str | None = None
+    full_name: str | None = None
+
+
 # ── Responses ──
+
+class RegisterPendingResponse(BaseModel):
+    success: bool = True
+    email: str
+    message: str
+    expires_in_minutes: int = 15
+    verification_link: str | None = None
 
 class TokenResponse(BaseModel):
     access_token: str

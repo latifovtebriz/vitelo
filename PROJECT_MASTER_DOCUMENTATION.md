@@ -266,7 +266,14 @@ Bütün endpointlər `https://api.vitelo.me/api/v1` prefiksi ilə işləyir:
 ### 1. Autentifikasiya (`/auth`)
 * `POST /auth/register`
   - **Body**: `{ "email": "user@mail.com", "password": "...", "full_name": "Tebriz Latifov" }`
-  - **Cavab (201)**: `{ "access_token": "jwt...", "refresh_token": "jwt...", "token_type": "bearer" }`
+  - **Cavab (200)**: `{ "success": true, "email": "...", "message": "A confirmation link has been sent to your email. It remains active for 15 minutes.", "expires_in_minutes": 15, "verification_link": "https://vitelo.me/verify-email?token=..." }`
+* `POST /auth/verify-email`
+  - **Body**: `{ "token": "jwt_15min_verification_token" }`
+  - **Cavab (200)**: `{ "access_token": "jwt...", "refresh_token": "jwt...", "token_type": "bearer" }`
+  - **İşləməsi**: 15 dəqiqəlik tokeni yoxlayır, istifadəçini bazaya yazır, aktivləşdirir və avtomatik login edir.
+* `POST /auth/resend-verification`
+  - **Body**: `{ "email": "user@mail.com" }`
+  - **Cavab (200)**: `{ "success": true, "message": "A new confirmation link has been sent..." }`
 * `POST /auth/login`
   - **Body**: `{ "email": "user@mail.com", "password": "..." }`
   - **Cavab (200)**: `{ "access_token": "jwt...", "refresh_token": "jwt..." }`
