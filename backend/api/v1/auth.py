@@ -25,6 +25,7 @@ from core.security import (
     verify_password,
 )
 from models.user import User
+from models.log import AppLog
 from schemas.auth import (
     LoginRequest,
     RefreshRequest,
@@ -59,6 +60,17 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     # Check email uniqueness
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
+        # Log conflict attempt
+        db.add(AppLog(
+            level="WARN",
+            source="backend",
+            category="auth_register_conflict",
+            message=f"Registration attempt failed: email {body.email} already exists",
+            user_email=body.email,
+            page_url="/register",
+            component="auth.py",
+        ))
+        await db.commit()
         raise EmailExistsError()
 
     pwd_hash = hash_password(body.password)
@@ -68,6 +80,19 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         full_name=body.full_name,
     )
     verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+
+    # Log token generation to database
+    db.add(AppLog(
+        level="ACTION",
+        source="backend",
+        category="auth_register_token_issued",
+        message=f"15-minute registration confirmation link dispatched for {body.email}",
+        user_email=body.email,
+        page_url="/register",
+        component="auth.py",
+        payload={"expires_in_minutes": 15, "full_name": body.full_name},
+    ))
+    await db.commit()
 
     return RegisterPendingResponse(
         success=True,
@@ -110,6 +135,20 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
         user.is_active = True
         await db.flush()
 
+    # Log successful email verification & account activation
+    db.add(AppLog(
+        level="ACTION",
+        source="backend",
+        category="auth_email_verified",
+        message=f"Account activated successfully for {email}",
+        user_id=user.id,
+        user_email=email,
+        page_url="/verify-email",
+        component="auth.py",
+        payload={"user_id": str(user.id), "credits": user.credits, "role": user.role},
+    ))
+    await db.commit()
+
     return _issue_tokens(str(user.id))
 
 
@@ -131,6 +170,17 @@ async def resend_verification(body: ResendVerificationRequest, db: AsyncSession 
     )
     verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
 
+    db.add(AppLog(
+        level="ACTION",
+        source="backend",
+        category="auth_resend_verification",
+        message=f"Resent 15-minute confirmation link to {body.email}",
+        user_email=body.email,
+        page_url="/register",
+        component="auth.py",
+    ))
+    await db.commit()
+
     return RegisterPendingResponse(
         success=True,
         email=body.email,
@@ -151,10 +201,44 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(body.password, user.password_hash):
+        db.add(AppLog(
+            level="WARN",
+            source="backend",
+            category="auth_login_failed",
+            message=f"Failed login attempt for {body.email}: invalid credentials",
+            user_email=body.email,
+            page_url="/login",
+            component="auth.py",
+        ))
+        await db.commit()
         raise InvalidCredentialsError()
 
     if not user.is_active:
+        db.add(AppLog(
+            level="WARN",
+            source="backend",
+            category="auth_login_inactive",
+            message=f"Failed login attempt for {body.email}: account is inactive",
+            user_id=user.id,
+            user_email=body.email,
+            page_url="/login",
+            component="auth.py",
+        ))
+        await db.commit()
         raise InactiveAccountError()
+
+    # Log successful login
+    db.add(AppLog(
+        level="ACTION",
+        source="backend",
+        category="auth_login_success",
+        message=f"User {user.email} logged in successfully",
+        user_id=user.id,
+        user_email=user.email,
+        page_url="/login",
+        component="auth.py",
+    ))
+    await db.commit()
 
     return _issue_tokens(str(user.id))
 
