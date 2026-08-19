@@ -106,10 +106,11 @@ vitelo/
 │   │   │   ├── authStore.ts        # JWT token, user payload, authentication state
 │   │   │   ├── languageStore.ts    # Selected UI language (AZ / EN / TR)
 │   │   │   └── cvStore.ts          # Active CV model, live score, styling config
-│   │   ├── pages/                  # 18 Application Views
+│   │   ├── pages/                  # 19 Application Views
 │   │   │   ├── Landing.tsx         # Modern Landing Page with Live Scanner & Pricing
 │   │   │   ├── Login.tsx           # Sign-in with "Forgot Password?" entry
-│   │   │   ├── Register.tsx        # New user registration
+│   │   │   ├── Register.tsx        # New user registration with Confirm Password & 15m Email flow
+│   │   │   ├── VerifyEmail.tsx     # 15-minute token confirmation & auto-login activator (/verify-email)
 │   │   │   ├── ForgotPassword.tsx  # Password reset link dispatcher
 │   │   │   ├── ResetPassword.tsx   # Token validation and new password setter
 │   │   │   ├── Dashboard.tsx       # Core User Dashboard
