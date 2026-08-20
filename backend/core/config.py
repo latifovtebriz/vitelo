@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # ── Email Service (Resend) ──
     RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = "Vitelo <onboarding@resend.dev>"
+    EMAIL_FROM: str = "Vitelo <no-reply@vitelo.me>"
 
     # ── App ──
     ENVIRONMENT: str = "development"
