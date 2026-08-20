@@ -17,7 +17,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
-from core.database import async_session_factory
+from core.database import async_session
 from models.log import AppLog
 
 logger = logging.getLogger("vitelo.central_logs")
@@ -142,7 +142,7 @@ class CentralTelemetry:
                 pass
         else:
             try:
-                async with async_session_factory() as session:
+                async with async_session() as session:
                     session.add(app_log_record)
                     # Auto-retention: clean logs older than 5 days
                     cutoff = datetime.now(timezone.utc) - timedelta(days=5)

@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     BETTERSTACK_TOKEN: str = ""
     SENTRY_DSN: str = ""
 
+    # ── Email Service (Resend) ──
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "Vitelo <onboarding@resend.dev>"
+
     # ── App ──
     ENVIRONMENT: str = "development"
     FRONTEND_URL: str = "https://vitelo.me"

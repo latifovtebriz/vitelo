@@ -26,6 +26,7 @@ from core.security import (
 )
 from models.user import User
 from models.log import AppLog
+from services.email_service import email_service
 from schemas.auth import (
     LoginRequest,
     RefreshRequest,
@@ -93,6 +94,13 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         payload={"expires_in_minutes": 15, "full_name": body.full_name},
     ))
     await db.commit()
+
+    # Dispatch real email via Resend
+    await email_service.send_verification_email(
+        to_email=body.email,
+        full_name=body.full_name or "",
+        verification_link=verification_link,
+    )
 
     return RegisterPendingResponse(
         success=True,
@@ -180,6 +188,13 @@ async def resend_verification(body: ResendVerificationRequest, db: AsyncSession 
         component="auth.py",
     ))
     await db.commit()
+
+    # Dispatch real email via Resend
+    await email_service.send_verification_email(
+        to_email=body.email,
+        full_name=body.full_name or "",
+        verification_link=verification_link,
+    )
 
     return RegisterPendingResponse(
         success=True,
@@ -332,6 +347,12 @@ async def forgot_password(
             await db.commit()
         except Exception:
             pass
+
+        # Dispatch real email via Resend
+        await email_service.send_password_reset_email(
+            to_email=user_email,
+            reset_link=reset_url,
+        )
 
     return {
         "success": True,
