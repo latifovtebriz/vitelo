@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     LEMONSQUEEZY_WEBHOOK_SECRET: str = ""
     LEMONSQUEEZY_STORE_ID: str = ""
 
+    # ── Centralized Logging (Better Stack / Logtail & Sentry) ──
+    LOGTAIL_SOURCE_TOKEN: str = ""
+    BETTERSTACK_TOKEN: str = ""
+    SENTRY_DSN: str = ""
+
     # ── App ──
     ENVIRONMENT: str = "development"
     FRONTEND_URL: str = "https://vitelo.me"

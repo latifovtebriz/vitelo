@@ -101,6 +101,27 @@ async def ingest_logs(
         else:
             logger.info(f"[{item.level}] {item.category}: {item.message} | Page: {item.page_url}")
 
+    # Stream to Centralized Logs (Better Stack)
+    try:
+        from core.telemetry import telemetry
+        await telemetry._send_to_betterstack([
+            {
+                "level": r.level,
+                "category": r.category,
+                "message": r.message,
+                "component": r.component,
+                "page_url": r.page_url,
+                "user_id": r.user_id,
+                "user_email": r.user_email,
+                "source": r.source,
+                "payload": r.payload,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in db_records
+        ])
+    except Exception:
+        pass
+
     # Auto-retention: Automatically prune logs older than 5 days
     cutoff_5_days = datetime.now(timezone.utc) - timedelta(days=5)
     await db.execute(delete(AppLog).where(AppLog.created_at < cutoff_5_days))
