@@ -120,7 +120,7 @@ class EmailService:
         }
 
         payload = {
-            "from": settings.EMAIL_FROM or "Vitelo <onboarding@resend.dev>",
+            "from": settings.EMAIL_FROM or "Vitelo <no-reply@vitelo.me>",
             "to": [to_email],
             "subject": subject,
             "html": html_content,
