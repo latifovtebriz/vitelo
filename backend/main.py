@@ -125,5 +125,5 @@ async def health_check():
         health["redis"] = f"error: {str(e)[:100]}"
         health["status"] = "degraded"
 
-    status_code = 200 if health["status"] == "ok" else 503
+    status_code = 200 if health["db"] == "connected" else 503
     return JSONResponse(content=health, status_code=status_code)
