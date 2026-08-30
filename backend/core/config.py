@@ -1,7 +1,9 @@
-"""Vitelo core configuration — loads all env vars via Pydantic BaseSettings."""
-
-from pydantic_settings import BaseSettings
+import os
 from functools import lru_cache
+from pathlib import Path
+from pydantic_settings import BaseSettings
+
+_ENV_FILE = str(Path(__file__).resolve().parent.parent / ".env")
 
 
 class Settings(BaseSettings):
@@ -46,7 +48,7 @@ class Settings(BaseSettings):
     API_URL: str = "https://api.vitelo.me"
 
     class Config:
-        env_file = ".env"
+        env_file = (_ENV_FILE, ".env")
         env_file_encoding = "utf-8"
         extra = "ignore"  # ignore unknown env vars
 
