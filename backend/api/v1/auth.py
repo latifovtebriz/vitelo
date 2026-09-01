@@ -57,10 +57,12 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     - Generates 15-minute secure confirmation token
     - Dispatches verification link to user's email
     """
+    print(f"\n[REGISTER_REQUEST] Email: {body.email} | Name: {body.full_name}")
     settings = get_settings()
     # Check email uniqueness
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
+        print(f"[REGISTER_CONFLICT] Email already exists: {body.email}")
         # Log conflict attempt
         db.add(AppLog(
             level="WARN",
@@ -81,6 +83,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         full_name=body.full_name,
     )
     verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    print(f"[TOKEN_GENERATED] Link: {verification_link}")
 
     # Log token generation to database
     db.add(AppLog(
@@ -91,16 +94,18 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         user_email=body.email,
         page_url="/register",
         component="auth.py",
-        payload={"expires_in_minutes": 15, "full_name": body.full_name},
+        payload={"expires_in_minutes": 15, "full_name": body.full_name, "link": verification_link},
     ))
     await db.commit()
 
     # Dispatch real email via Resend
-    await email_service.send_verification_email(
+    print(f"[DISPATCHING_EMAIL] Calling email_service for {body.email}...")
+    email_success = await email_service.send_verification_email(
         to_email=body.email,
         full_name=body.full_name or "",
         verification_link=verification_link,
     )
+    print(f"[REGISTER_DONE] Email sent result: {email_success}")
 
     return RegisterPendingResponse(
         success=True,
@@ -322,7 +327,7 @@ async def forgot_password(
     """Initiate password reset flow by sending a reset link."""
     from models.log import AppLog
 
-    email_clean = body.email.strip().lower()
+    print(f"\n[FORGOT_PASSWORD_REQUEST] Email: {email_clean}")
     result = await db.execute(select(User.id, User.email).where(User.email == email_clean))
     user_row = result.first()
 
@@ -330,6 +335,7 @@ async def forgot_password(
         user_id, user_email = user_row
         reset_token = create_password_reset_token(str(user_id), user_email)
         reset_url = f"https://vitelo.me/reset-password?token={reset_token}"
+        print(f"[RESET_TOKEN_GENERATED] Reset URL: {reset_url}")
 
         # Telemetry & Audit log
         try:
@@ -349,10 +355,14 @@ async def forgot_password(
             pass
 
         # Dispatch real email via Resend
-        await email_service.send_password_reset_email(
+        print(f"[DISPATCHING_RESET_EMAIL] Sending to {user_email}...")
+        reset_sent = await email_service.send_password_reset_email(
             to_email=user_email,
             reset_link=reset_url,
         )
+        print(f"[FORGOT_PASSWORD_DONE] Reset email sent result: {reset_sent}")
+    else:
+        print(f"[FORGOT_PASSWORD] Email {email_clean} not found in users table. (User must register and verify first).")
 
     return {
         "success": True,

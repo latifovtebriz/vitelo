@@ -126,18 +126,21 @@ class EmailService:
             "html": html_content,
         }
 
+        print(f"\n[EMAIL_DISPATCH] Sending email to: {to_email} | Subject: {subject} | From: {payload['from']}")
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(RESEND_API_URL, headers=headers, json=payload)
+                print(f"[RESEND_RESPONSE] Status: {resp.status_code} | Body: {resp.text}")
                 if resp.status_code in [200, 201]:
-                    logger.info(f"Email successfully dispatched to {to_email} via Resend. ID: {resp.json().get('id')}")
+                    logger.info(f"[SUCCESS] Email dispatched to {to_email} via Resend. ID: {resp.json().get('id')}")
                     return True
                 else:
                     err_detail = resp.text
-                    logger.error(f"Resend API error [{resp.status_code}]: {err_detail}")
+                    logger.error(f"[ERROR] Resend API error [{resp.status_code}]: {err_detail}")
                     return False
         except Exception as e:
-            logger.error(f"Exception during email dispatch: {e}")
+            print(f"[EMAIL_EXCEPTION] {e}")
+            logger.error(f"[ERROR] Exception during email dispatch: {e}")
             return False
 
     @classmethod
@@ -148,7 +151,7 @@ class EmailService:
         verification_link: str,
     ) -> bool:
         """Send 15-minute account verification link."""
-        subject = "Confirm your Vitelo Account ✨"
+        subject = "Confirm your Vitelo Account"
         html = _get_verification_html(full_name, verification_link)
         return await cls.send_email(to_email, subject, html)
 
@@ -159,7 +162,7 @@ class EmailService:
         reset_link: str,
     ) -> bool:
         """Send 30-minute password reset link."""
-        subject = "Reset your Vitelo password 🔒"
+        subject = "Reset your Vitelo password"
         html = _get_password_reset_html(reset_link)
         return await cls.send_email(to_email, subject, html)
 
