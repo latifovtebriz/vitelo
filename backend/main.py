@@ -62,8 +62,8 @@ app = FastAPI(
     description="AI-powered CV Builder + Cover Letter + Job Match Platform",
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
-    redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 app.state.limiter = limiter
@@ -146,3 +146,17 @@ async def health_check():
 
     status_code = 200 if health["db"] == "connected" else 503
     return JSONResponse(content=health, status_code=status_code)
+
+
+# ── Root ──
+@app.get("/")
+async def root():
+    """Root endpoint — confirms API is alive and reachable."""
+    return {
+        "name": "Vitelo API",
+        "version": "1.0.0",
+        "status": "online",
+        "docs": "/docs",
+        "environment": settings.ENVIRONMENT,
+    }
+
