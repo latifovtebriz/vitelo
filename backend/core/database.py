@@ -17,14 +17,15 @@ settings = get_settings()
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=(settings.ENVIRONMENT == "development"),
-    pool_size=10,
-    max_overflow=10,
+    pool_size=5,
+    max_overflow=5,
     pool_pre_ping=True,
-    pool_recycle=300,
+    pool_recycle=180,
+    pool_timeout=5,
     connect_args={
         "prepared_statement_cache_size": 0,
         "statement_cache_size": 0,
-        "command_timeout": 30,
+        "command_timeout": 15,
     },
 )
 

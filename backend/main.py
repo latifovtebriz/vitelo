@@ -131,7 +131,12 @@ async def health_check():
 
     # Check Redis (Upstash)
     try:
-        r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        r = aioredis.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            socket_timeout=1.5,
+            socket_connect_timeout=1.5,
+        )
         await r.ping()
         await r.aclose()
         health["redis"] = "connected"

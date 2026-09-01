@@ -88,7 +88,7 @@ class ColumnResponse(BaseModel):
 
 class TrackerBoardResponse(BaseModel):
     id: uuid.UUID
-    name: str
+    title: str
     columns: List[ColumnResponse]
 
 
@@ -105,7 +105,7 @@ async def _get_or_create_tracker(user_id: uuid.UUID, db: AsyncSession) -> JobTra
     tracker = result.scalar_one_or_none()
 
     if not tracker:
-        tracker = JobTracker(user_id=user_id, name="Board")
+        tracker = JobTracker(user_id=user_id, title="Board")
         db.add(tracker)
         await db.flush()
 
@@ -160,7 +160,7 @@ async def get_tracker_board(
 
     return TrackerBoardResponse(
         id=tracker.id,
-        name=tracker.name,
+        title=tracker.title,
         columns=col_responses,
     )
 

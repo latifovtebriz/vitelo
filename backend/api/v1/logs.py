@@ -122,10 +122,6 @@ async def ingest_logs(
     except Exception:
         pass
 
-    # Auto-retention: Automatically prune logs older than 5 days
-    cutoff_5_days = datetime.now(timezone.utc) - timedelta(days=5)
-    await db.execute(delete(AppLog).where(AppLog.created_at < cutoff_5_days))
-
     await db.commit()
     return {"success": True, "ingested_count": len(db_records)}
 

@@ -20,7 +20,8 @@ class JobTracker(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
     )
-    name: Mapped[str] = mapped_column(String(100), default="Board")
+    title: Mapped[str] = mapped_column(String(100), default="Board")
+    name: Mapped[Optional[str]] = mapped_column(String(100), default="Board")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="job_tracker")
@@ -29,7 +30,7 @@ class JobTracker(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<JobTracker {self.name} for user={self.user_id}>"
+        return f"<JobTracker {self.title} for user={self.user_id}>"
 
 
 class JobTrackerColumn(Base):

@@ -355,3 +355,5 @@ Sabah başqa kompüterdə layihəni açdıqda sadəcə bu addımları atın:
 2. 🪵 **Mütləq Telemetriya Loqlaması**: Hər bir yeni düymə, API və ya səhifə xətası `app_logs` cədvəlinə və Better Stack-ə ötürülməlidir.
 3. 📦 **TypeScript Verbatim Syntax**: Bütün Type importları `import type { ... } from '...'` formatında olmalıdır. `npm run build` hər commit-dən əvvəl 0 xəta ilə tamamlanmalıdır.
 4. 🌐 **IPv4 Supabase Pooler**: Birbaşa IPv6 `db.qxwxpykthyoyfnydsxvn.supabase.co` əvəzinə həmişə `aws-0-ap-south-1.pooler.supabase.com:5432` Session Pooler ünvanından istifadə olunmalıdır.
+5. ⚡ **SQLAlchemy Pool Ölçüsü**: Supabase Free plan bağlantı limiti 15 olduğu üçün backend `pool_size=5, max_overflow=5, pool_timeout=5, pool_recycle=180` parametrindən artıq təyin olunmamalıdır.
+6. 🔐 **Native bcrypt Hashing**: `passlib` əvəzinə təmiz C-əsaslı `bcrypt` paketi istifadə olunmalıdır (performans və Windows charmap xətalarının qarşısını almaq üçün).

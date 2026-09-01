@@ -134,16 +134,26 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
     user = existing.scalar_one_or_none()
 
     if not user:
-        user = User(
-            email=email,
-            password_hash=pwd_hash,
-            full_name=full_name,
-            role="individual",
-            credits=1,
-            is_active=True,
-        )
-        db.add(user)
-        await db.flush()
+        try:
+            user = User(
+                email=email,
+                password_hash=pwd_hash,
+                full_name=full_name,
+                role="individual",
+                credits=1,
+                is_active=True,
+            )
+            db.add(user)
+            await db.flush()
+        except Exception:
+            await db.rollback()
+            # Re-fetch — another request already created this user
+            existing2 = await db.execute(select(User).where(User.email == email))
+            user = existing2.scalar_one_or_none()
+            if not user:
+                raise
+            user.is_active = True
+            await db.flush()
     else:
         user.is_active = True
         await db.flush()
@@ -327,6 +337,7 @@ async def forgot_password(
     """Initiate password reset flow by sending a reset link."""
     from models.log import AppLog
 
+    email_clean = body.email.strip().lower()
     print(f"\n[FORGOT_PASSWORD_REQUEST] Email: {email_clean}")
     result = await db.execute(select(User.id, User.email).where(User.email == email_clean))
     user_row = result.first()
