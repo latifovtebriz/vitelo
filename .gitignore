@@ -57,6 +57,8 @@ htmlcov/
 *.log
 *.pid
 *.seed
+*.db
+backend/*.db
 
 # Deployment artifacts
 deploy.sh

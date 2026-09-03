@@ -17,6 +17,11 @@ Features:
 - Routers for auth, cv, cover_letter, job_match, billing, user, b2b
 """
 
+import sys
+import asyncio
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -51,6 +56,13 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"🚀 Vitelo API starting ({settings.ENVIRONMENT})")
+    # Auto-create all tables when using SQLite (local dev)
+    if settings.DATABASE_URL.startswith("sqlite"):
+        from core.database import Base, engine as _engine
+        import models  # noqa — ensure all models are imported so Base knows them
+        async with _engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("📦 SQLite tables created (local dev mode)")
     yield
     await engine.dispose()
     logger.info("👋 Vitelo API shutting down")

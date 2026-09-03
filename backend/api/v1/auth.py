@@ -6,7 +6,8 @@ POST /refresh   → verify refresh token, issue new pair
 GET  /me        → return current user profile
 """
 
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -221,22 +222,45 @@ async def resend_verification(body: ResendVerificationRequest, db: AsyncSession 
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Login with email + password.
+    Login with email + password (supports both JSON and OAuth2 Form data from Swagger).
     - 401 if email not found or password wrong
     - 403 if account deactivated
     """
-    result = await db.execute(select(User).where(User.email == body.email))
+    email = None
+    password = None
+
+    content_type = request.headers.get("content-type", "")
+    if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+        form = await request.form()
+        email = form.get("username") or form.get("email")
+        password = form.get("password")
+    else:
+        try:
+            json_data = await request.json()
+            if isinstance(json_data, dict):
+                email = json_data.get("email") or json_data.get("username")
+                password = json_data.get("password")
+        except Exception:
+            pass
+
+    if not email or not password:
+        raise InvalidCredentialsError("Email and password are required.")
+
+    result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(body.password, user.password_hash):
+    if not user or not verify_password(password, user.password_hash):
         db.add(AppLog(
             level="WARN",
             source="backend",
             category="auth_login_failed",
-            message=f"Failed login attempt for {body.email}: invalid credentials",
-            user_email=body.email,
+            message=f"Failed login attempt for {email}: invalid credentials",
+            user_email=email,
             page_url="/login",
             component="auth.py",
         ))
