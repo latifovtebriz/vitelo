@@ -34,13 +34,19 @@ if _is_sqlite:
     )
 else:
     # PostgreSQL (Supabase) for production
-    # Build a no-verify SSL context so asyncpg can handshake on Windows
+    db_url = settings.DATABASE_URL
+    if "%ec" in db_url and "%25ec" not in db_url:
+        db_url = db_url.replace("%ec", "%25ec")
+    if "&aT5" in db_url and "%26aT5" not in db_url:
+        db_url = db_url.replace("&aT5", "%26aT5")
+
+    # Build a no-verify SSL context for secure connection
     _ssl_ctx = _ssl.create_default_context()
     _ssl_ctx.check_hostname = False
     _ssl_ctx.verify_mode = _ssl.CERT_NONE
 
     engine = create_async_engine(
-        settings.DATABASE_URL,
+        db_url,
         echo=(settings.ENVIRONMENT == "development"),
         pool_size=5,
         max_overflow=5,
