@@ -288,46 +288,55 @@ async def login(
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(password, user.password_hash):
-        db.add(AppLog(
-            level="WARN",
-            source="backend",
-            category="auth_login_failed",
-            message=f"Failed login attempt for {email}: invalid credentials",
-            user_email=email,
-            page_url="/login",
-            component="auth.py",
-        ))
-        await db.commit()
+        try:
+            db.add(AppLog(
+                level="WARN",
+                source="backend",
+                category="auth_login_failed",
+                message=f"Failed login attempt for {email}: invalid credentials",
+                user_email=email,
+                page_url="/login",
+                component="auth.py",
+            ))
+            await db.commit()
+        except Exception:
+            pass
         raise InvalidCredentialsError()
 
     if not user.is_active:
         print(f"[BREAKPOINT - LOGIN] User inactive: {email}")
+        try:
+            db.add(AppLog(
+                level="WARN",
+                source="backend",
+                category="auth_login_inactive",
+                message=f"Failed login attempt for {email}: account is inactive",
+                user_id=user.id,
+                user_email=email,
+                page_url="/login",
+                component="auth.py",
+            ))
+            await db.commit()
+        except Exception:
+            pass
+        raise InactiveAccountError()
+
+    # Log successful login (safe)
+    print(f"[BREAKPOINT - LOGIN SUCCESS] User authenticated: {user.email} (ID: {user.id})")
+    try:
         db.add(AppLog(
-            level="WARN",
+            level="ACTION",
             source="backend",
-            category="auth_login_inactive",
-            message=f"Failed login attempt for {email}: account is inactive",
+            category="auth_login_success",
+            message=f"User {user.email} logged in successfully",
             user_id=user.id,
-            user_email=email,
+            user_email=user.email,
             page_url="/login",
             component="auth.py",
         ))
         await db.commit()
-        raise InactiveAccountError()
-
-    # Log successful login
-    print(f"[BREAKPOINT - LOGIN SUCCESS] User authenticated: {user.email} (ID: {user.id})")
-    db.add(AppLog(
-        level="ACTION",
-        source="backend",
-        category="auth_login_success",
-        message=f"User {user.email} logged in successfully",
-        user_id=user.id,
-        user_email=user.email,
-        page_url="/login",
-        component="auth.py",
-    ))
-    await db.commit()
+    except Exception:
+        pass
 
     return _issue_tokens(str(user.id))
 
