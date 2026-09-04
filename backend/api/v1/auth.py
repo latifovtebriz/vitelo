@@ -28,6 +28,7 @@ from core.security import (
 from models.user import User
 from models.log import AppLog
 from services.email_service import email_service
+from services.supabase_sync import supabase_sync
 from schemas.auth import (
     LoginRequest,
     RefreshRequest,
@@ -190,6 +191,20 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
         payload={"user_id": str(user.id), "credits": user.credits, "role": user.role},
     ))
     await db.commit()
+
+    # Real-time sync to Supabase PostgreSQL cloud database
+    try:
+        await supabase_sync.sync_user(
+            user_id=str(user.id),
+            email=user.email,
+            password_hash=user.password_hash,
+            full_name=user.full_name or "",
+            role=user.role,
+            credits=user.credits,
+            is_active=True,
+        )
+    except Exception as sync_err:
+        print(f"[WARN] Supabase real-time sync note: {sync_err}")
 
     return _issue_tokens(str(user.id))
 
@@ -361,6 +376,10 @@ async def change_password(
         raise _HTTPException(status_code=400, detail="New password must be at least 8 characters.")
     current_user.password_hash = hash_password(body.new_password)
     await db.commit()
+    try:
+        await supabase_sync.update_user_password(current_user.email, current_user.password_hash)
+    except Exception:
+        pass
     return {"message": "Password updated successfully."}
 
 
@@ -460,6 +479,11 @@ async def reset_password(
 
     user.password_hash = hash_password(body.new_password)
     await db.commit()
+
+    try:
+        await supabase_sync.update_user_password(user.email, user.password_hash)
+    except Exception:
+        pass
 
     try:
         log_entry = AppLog(
