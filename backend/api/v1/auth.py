@@ -86,27 +86,33 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
     print(f"[TOKEN_GENERATED] Link: {verification_link}")
 
-    # Log token generation to database
-    db.add(AppLog(
-        level="ACTION",
-        source="backend",
-        category="auth_register_token_issued",
-        message=f"15-minute registration confirmation link dispatched for {body.email}",
-        user_email=body.email,
-        page_url="/register",
-        component="auth.py",
-        payload={"expires_in_minutes": 15, "full_name": body.full_name, "link": verification_link},
-    ))
-    await db.commit()
+    # Log token generation to database (safe)
+    try:
+        db.add(AppLog(
+            level="ACTION",
+            source="backend",
+            category="auth_register_token_issued",
+            message=f"15-minute registration confirmation link dispatched for {body.email}",
+            user_email=body.email,
+            page_url="/register",
+            component="auth.py",
+            payload={"expires_in_minutes": 15, "full_name": body.full_name, "link": verification_link},
+        ))
+        await db.commit()
+    except Exception as log_err:
+        print(f"[WARN] Non-critical AppLog error during register: {log_err}")
 
-    # Dispatch real email via Resend
-    print(f"[DISPATCHING_EMAIL] Calling email_service for {body.email}...")
-    email_success = await email_service.send_verification_email(
-        to_email=body.email,
-        full_name=body.full_name or "",
-        verification_link=verification_link,
-    )
-    print(f"[REGISTER_DONE] Email sent result: {email_success}")
+    # Dispatch real email via Resend (safe)
+    try:
+        print(f"[DISPATCHING_EMAIL] Calling email_service for {body.email}...")
+        email_success = await email_service.send_verification_email(
+            to_email=body.email,
+            full_name=body.full_name or "",
+            verification_link=verification_link,
+        )
+        print(f"[REGISTER_DONE] Email sent result: {email_success}")
+    except Exception as mail_err:
+        print(f"[WARN] Email service exception: {mail_err}")
 
     return RegisterPendingResponse(
         success=True,

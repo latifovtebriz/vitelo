@@ -63,12 +63,31 @@ class TierRequiredError(ViteloException):
         )
 
 
+import traceback
+import logging
+
+logger = logging.getLogger("vitelo.errors")
+
+
 def register_exception_handlers(app: FastAPI):
-    """Register the ViteloException handler on the FastAPI app."""
+    """Register ViteloException and global Exception handlers on the FastAPI app."""
 
     @app.exception_handler(ViteloException)
     async def vitelo_exception_handler(request: Request, exc: ViteloException):
         return JSONResponse(
             status_code=exc.status_code,
             content={"error": exc.error_code, "message": exc.message},
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        tb = traceback.format_exc()
+        logger.error(f"Unhandled Exception on {request.method} {request.url.path}: {exc}\n{tb}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "INTERNAL_SERVER_ERROR",
+                "message": str(exc),
+                "detail": f"{type(exc).__name__}: {str(exc)}",
+            },
         )
