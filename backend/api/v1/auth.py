@@ -42,6 +42,18 @@ from schemas.auth import (
 router = APIRouter()
 
 
+def _get_frontend_base_url(request: Request) -> str:
+    origin = request.headers.get("origin") or request.headers.get("referer") or ""
+    if "localhost:5173" in origin or "127.0.0.1:5173" in origin:
+        return "http://localhost:5173"
+    if "localhost:8000" in origin or "127.0.0.1:8000" in origin:
+        return "http://localhost:5173"
+    settings = get_settings()
+    if settings.ENVIRONMENT == "development":
+        return "http://localhost:5173"
+    return settings.FRONTEND_URL or "https://vitelo.me"
+
+
 def _issue_tokens(user_id: str) -> TokenResponse:
     """Helper: create access + refresh tokens for a user."""
     return TokenResponse(
@@ -51,7 +63,7 @@ def _issue_tokens(user_id: str) -> TokenResponse:
 
 
 @router.post("/register", response_model=RegisterPendingResponse, status_code=200)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(body: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
     """
     Step 1 of Registration:
     - 409 if email already exists
@@ -59,7 +71,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     - Dispatches verification link to user's email
     """
     print(f"\n[REGISTER_REQUEST] Email: {body.email} | Name: {body.full_name}")
-    settings = get_settings()
+    frontend_base = _get_frontend_base_url(request)
     # Check email uniqueness
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
@@ -83,7 +95,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         password_hash=pwd_hash,
         full_name=body.full_name,
     )
-    verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    verification_link = f"{frontend_base}/verify-email?token={token}"
     print(f"[TOKEN_GENERATED] Link: {verification_link}")
 
     # Log token generation to database (safe)
@@ -183,11 +195,11 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
 
 
 @router.post("/resend-verification", response_model=RegisterPendingResponse)
-async def resend_verification(body: ResendVerificationRequest, db: AsyncSession = Depends(get_db)):
+async def resend_verification(body: ResendVerificationRequest, request: Request, db: AsyncSession = Depends(get_db)):
     """
     Resends 15-minute confirmation email.
     """
-    settings = get_settings()
+    frontend_base = _get_frontend_base_url(request)
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
         raise EmailExistsError("An active account with this email already exists. Please log in.")
@@ -198,7 +210,7 @@ async def resend_verification(body: ResendVerificationRequest, db: AsyncSession 
         password_hash=pwd_hash,
         full_name=body.full_name,
     )
-    verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    verification_link = f"{frontend_base}/verify-email?token={token}"
 
     db.add(AppLog(
         level="ACTION",
@@ -274,13 +286,14 @@ async def login(
         raise InvalidCredentialsError()
 
     if not user.is_active:
+        print(f"[BREAKPOINT - LOGIN] User inactive: {email}")
         db.add(AppLog(
             level="WARN",
             source="backend",
             category="auth_login_inactive",
-            message=f"Failed login attempt for {body.email}: account is inactive",
+            message=f"Failed login attempt for {email}: account is inactive",
             user_id=user.id,
-            user_email=body.email,
+            user_email=email,
             page_url="/login",
             component="auth.py",
         ))
@@ -288,6 +301,7 @@ async def login(
         raise InactiveAccountError()
 
     # Log successful login
+    print(f"[BREAKPOINT - LOGIN SUCCESS] User authenticated: {user.email} (ID: {user.id})")
     db.add(AppLog(
         level="ACTION",
         source="backend",
@@ -362,11 +376,13 @@ class ResetPasswordRequest(_BM):
 @router.post("/forgot-password", status_code=200)
 async def forgot_password(
     body: ForgotPasswordRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """Initiate password reset flow by sending a reset link."""
     from models.log import AppLog
 
+    frontend_base = _get_frontend_base_url(request)
     email_clean = body.email.strip().lower()
     print(f"\n[FORGOT_PASSWORD_REQUEST] Email: {email_clean}")
     result = await db.execute(select(User.id, User.email).where(User.email == email_clean))
@@ -375,7 +391,7 @@ async def forgot_password(
     if user_row:
         user_id, user_email = user_row
         reset_token = create_password_reset_token(str(user_id), user_email)
-        reset_url = f"https://vitelo.me/reset-password?token={reset_token}"
+        reset_url = f"{frontend_base}/reset-password?token={reset_token}"
         print(f"[RESET_TOKEN_GENERATED] Reset URL: {reset_url}")
 
         # Telemetry & Audit log

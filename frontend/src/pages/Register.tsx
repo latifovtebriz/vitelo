@@ -41,12 +41,8 @@ export default function Register() {
       }
     } catch (err: any) {
       logger.error('Register', 'Registration error', err);
-      
-      // Resilient Fallback for local testing if remote backend CORS or network blocked
-      const fallbackToken = btoa(JSON.stringify({ email, full_name: fullName, time: Date.now() }));
-      const localLink = `${window.location.origin}/verify-email?token=${fallbackToken}&dev=true`;
-      setVerificationLink(localLink);
-      setPendingConfirmation(true);
+      const msg = err.response?.data?.message || err.response?.data?.detail || err.message || 'Registration failed. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -63,10 +59,8 @@ export default function Register() {
       setResendSuccess(true);
       setTimeout(() => setResendSuccess(false), 4000);
     } catch (err: any) {
-      const fallbackToken = btoa(JSON.stringify({ email, full_name: fullName, time: Date.now() }));
-      setVerificationLink(`${window.location.origin}/verify-email?token=${fallbackToken}&dev=true`);
-      setResendSuccess(true);
-      setTimeout(() => setResendSuccess(false), 4000);
+      const msg = err.response?.data?.message || err.response?.data?.detail || err.message || 'Resend failed.';
+      setError(msg);
     } finally {
       setResending(false);
     }

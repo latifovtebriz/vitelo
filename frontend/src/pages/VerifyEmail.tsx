@@ -37,39 +37,26 @@ export default function VerifyEmail() {
           } catch {}
         }
 
-        try {
-          const res = await api.post('/auth/verify-email', { token });
-          api.defaults.headers.Authorization = `Bearer ${res.data.access_token}`;
-          const userRes = await api.get('/auth/me');
-          setAuth(userRes.data, res.data.access_token);
-        } catch {
-          // Local QA resilience fallback
-          const mockUser = {
-            id: 'usr_' + Date.now(),
-            email: userEmail,
-            full_name: userFullName,
-            role: 'individual',
-            credits: 1,
-            created_at: new Date().toISOString(),
-          };
-          const mockToken = 'jwt_verified_token_' + Date.now();
-          setAuth(mockUser as any, mockToken);
-        }
-        
+        const res = await api.post('/auth/verify-email', { token });
+        api.defaults.headers.Authorization = `Bearer ${res.data.access_token}`;
+        const userRes = await api.get('/auth/me');
+        setAuth(userRes.data, res.data.access_token);
         setStatus('success');
-        logger.action('VerifyEmail', 'Email verified and user logged in successfully', { email: userEmail });
+        logger.action('VerifyEmail', 'Email verified and user logged in successfully', { email: userRes.data.email });
 
         // Auto-redirect to dashboard after 2s
         setTimeout(() => {
           navigate('/dashboard');
         }, 2000);
       } catch (err: any) {
-        logger.error('VerifyEmail', 'Email verification failed', err);
+        logger.error('VerifyEmail', 'Verification failed', err);
         setStatus('error');
-        setErrorMessage(
+        const msg =
           err.response?.data?.message ||
-          'Verification link has expired or is invalid. Links remain active for 15 minutes.'
-        );
+          err.response?.data?.detail ||
+          err.message ||
+          'Verification link has expired or is invalid. Links remain active for 15 minutes.';
+        setErrorMessage(msg);
       }
     };
 
