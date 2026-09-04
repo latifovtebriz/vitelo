@@ -109,7 +109,7 @@ class EmailService:
         html_content: str,
     ) -> bool:
         """Send email via Resend API."""
-        api_key = settings.RESEND_API_KEY
+        api_key = settings.RESEND_API_KEY or "re_hV13drPC_8r5woUzcf3MH8Y3EGZ5FhiSY"
         if not api_key:
             logger.warning("RESEND_API_KEY not configured. Skipping physical email dispatch.")
             return False
@@ -119,8 +119,12 @@ class EmailService:
             "Content-Type": "application/json",
         }
 
+        from_address = settings.EMAIL_FROM or "Vitelo <no-reply@vitelo.me>"
+        if "resend.dev" in from_address or not from_address:
+            from_address = "Vitelo <no-reply@vitelo.me>"
+
         payload = {
-            "from": settings.EMAIL_FROM or "Vitelo <no-reply@vitelo.me>",
+            "from": from_address,
             "to": [to_email],
             "subject": subject,
             "html": html_content,
